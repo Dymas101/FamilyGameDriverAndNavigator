@@ -1,0 +1,1920 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+<meta name="theme-color" content="#04101c" />
+<meta name="mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='10' fill='%2306101c'/%3E%3Cpath d='M32 10 54 32 32 54 10 32Z' fill='none' stroke='%2373e6ff' stroke-width='3'/%3E%3Cpath d='M32 23 41 32 32 41 23 32Z' fill='%23ffd166'/%3E%3C/svg%3E" />
+<title>Family Game — Controller</title>
+<style>
+  :root{
+    --bg:#030d17;
+    --deep:#04172a;
+    --panel:#071c2e;
+    --panel-2:#0a2439;
+    --line:rgba(118,211,240,.18);
+    --line-strong:rgba(118,211,240,.4);
+    --cyan:#75e9ff;
+    --cyan-deep:#2da8c6;
+    --yellow:#ffd166;
+    --orange:#ffbe3d;
+    --red:#ff596e;
+    --green:#71f2c0;
+    --white:#f4fbff;
+    --muted:#7f9daf;
+    --font:"Bahnschrift","DIN Alternate","Segoe UI",system-ui,-apple-system,sans-serif;
+    --font-narrow:"Bahnschrift SemiCondensed","Arial Narrow","Segoe UI",sans-serif;
+    --safe-top:env(safe-area-inset-top, 0px);
+    --safe-bottom:env(safe-area-inset-bottom, 0px);
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{width:100%;height:100%;margin:0;padding:0}
+  html{background:var(--bg)}
+  body{
+    color:var(--white);font-family:var(--font);background:
+      radial-gradient(ellipse at 50% -8%,rgba(24,92,122,.3),transparent 45%),
+      radial-gradient(ellipse at 100% 85%,rgba(18,55,79,.2),transparent 52%),
+      linear-gradient(160deg,#04111f 0%,#020b14 100%);
+    overflow:hidden;position:fixed;inset:0;
+    overscroll-behavior:none;touch-action:manipulation;
+    user-select:none;-webkit-user-select:none;-webkit-font-smoothing:antialiased;
+  }
+  body::before{
+    content:"";position:fixed;inset:0;pointer-events:none;opacity:.045;
+    background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 160 160' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.95' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    mix-blend-mode:screen;
+  }
+  button,input{font:inherit}
+  button{color:inherit;border:0;cursor:pointer}
+  button:disabled{cursor:not-allowed}
+  [hidden]{display:none !important}
+
+  .app{
+    position:relative;width:100%;height:100vh;min-height:100vh;height:100dvh;min-height:100dvh;
+    display:flex;flex-direction:column;overflow:hidden;
+    padding-top:var(--safe-top);
+  }
+  .topbar{
+    flex:0 0 auto;display:flex;align-items:center;justify-content:space-between;gap:12px;
+    padding:14px 18px 10px;position:relative;z-index:3;
+  }
+  .brand{display:flex;align-items:center;gap:10px;min-width:0}
+  .brand-mark{
+    width:27px;height:27px;border:1px solid rgba(117,233,255,.45);transform:rotate(45deg);
+    display:grid;place-items:center;background:rgba(11,44,67,.6);flex:0 0 auto;
+  }
+  .brand-mark::after{content:"";width:8px;height:8px;border:1px solid var(--yellow);display:block}
+  .brand-copy{min-width:0}
+  .brand-name{
+    font-family:var(--font-narrow);font-size:12px;font-weight:800;letter-spacing:.14em;
+    line-height:1;white-space:nowrap;color:#e5f7ff;
+  }
+  .brand-sub{
+    margin-top:4px;color:#5f8296;font-size:7.5px;font-weight:700;letter-spacing:.15em;
+    text-transform:uppercase;white-space:nowrap;
+  }
+  .conn-pill{
+    display:inline-flex;align-items:center;gap:6px;flex:0 0 auto;
+    padding:6px 9px;border:1px solid rgba(118,211,240,.15);border-radius:99px;
+    background:rgba(4,18,31,.65);color:#88a7b7;
+    font-size:8px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;
+    max-width:160px;overflow:hidden;
+  }
+  .conn-pill i{width:5px;height:5px;border-radius:50%;background:#80939e;flex:0 0 auto}
+  .conn-pill.connecting i{background:var(--yellow);animation:blink 1.2s infinite}
+  .conn-pill.connected{color:#a9ebd5;border-color:rgba(113,242,192,.24)}
+  .conn-pill.connected i{background:var(--green);box-shadow:0 0 8px rgba(113,242,192,.8)}
+  .conn-pill.error{color:#ffb1b9;border-color:rgba(255,89,110,.25)}
+  .conn-pill.error i{background:var(--red)}
+  @keyframes blink{0%,100%{opacity:.35}50%{opacity:1}}
+
+  main{position:relative;flex:1 1 auto;min-height:0;width:100%;max-width:620px;margin:0 auto;padding:0 16px calc(16px + var(--safe-bottom));display:flex;overflow:hidden}
+  .screen{display:none;width:100%;min-height:0;animation:screenIn .32s cubic-bezier(.2,.85,.25,1) both}
+  .screen.active{display:flex;flex-direction:column}
+  @keyframes screenIn{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:none}}
+
+  /* ---------------------------------------------------------------- Join */
+  #join-screen{justify-content:center;padding-bottom:7vh;gap:20px}
+  .join-head{text-align:left}
+  .eyebrow{
+    display:flex;align-items:center;gap:8px;color:var(--cyan);
+    font-size:9px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;margin-bottom:13px;
+  }
+  .eyebrow::before{content:"";width:22px;height:1px;background:var(--cyan);box-shadow:0 0 9px var(--cyan)}
+  .join-title{
+    margin:0;font-family:var(--font-narrow);font-size:clamp(42px,13vw,60px);line-height:.88;
+    font-weight:800;text-transform:uppercase;letter-spacing:-.035em;
+  }
+  .join-title em{font-style:normal;color:var(--yellow)}
+  .join-desc{margin:15px 0 0;color:#93b0c1;font-size:12.5px;line-height:1.6;max-width:38ch}
+  .room-form{
+    border:1px solid var(--line);border-radius:8px;background:linear-gradient(155deg,rgba(10,35,55,.8),rgba(4,15,26,.9));
+    padding:16px;box-shadow:0 20px 60px rgba(0,0,0,.25);
+  }
+  .field-label{display:block;color:#6e8fa2;font-size:8.5px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;margin-bottom:8px}
+  .room-entry{display:flex;gap:8px}
+  .room-entry input{
+    flex:1;min-width:0;height:54px;border:1px solid rgba(118,211,240,.24);border-radius:5px;
+    background:rgba(2,12,21,.9);color:var(--white);padding:0 14px;
+    font-family:var(--font-narrow);font-size:25px;font-weight:800;letter-spacing:.22em;text-transform:uppercase;
+    outline:none;transition:border-color .15s,box-shadow .15s;
+  }
+  .room-entry input::placeholder{color:#37596d;letter-spacing:.18em}
+  .room-entry input:focus{border-color:rgba(117,233,255,.65);box-shadow:0 0 0 3px rgba(117,233,255,.06)}
+  .join-btn{
+    flex:0 0 auto;height:54px;padding:0 19px;border-radius:5px;
+    background:linear-gradient(135deg,#8bf1ff,var(--cyan) 45%,#2ec7e4);
+    color:#03131d;font-weight:800;font-size:11px;letter-spacing:.1em;text-transform:uppercase;
+    box-shadow:0 8px 25px rgba(85,222,255,.18);
+  }
+  .join-btn:active{transform:scale(.98)}
+  .join-btn:disabled{opacity:.55}
+  .join-error{min-height:18px;margin:10px 0 0;color:#ff9da8;font-size:10.5px;line-height:1.5}
+  .join-note{
+    display:flex;align-items:flex-start;gap:8px;margin-top:12px;padding-top:12px;
+    border-top:1px solid rgba(118,211,240,.09);
+    color:#658597;font-size:10px;line-height:1.55;
+  }
+  .join-note b{color:#9cb9c9;font-weight:600}
+  .join-note .dot{width:5px;height:5px;border-radius:50%;background:var(--cyan);margin-top:6px;flex:0 0 auto}
+  .connect-hint{color:#4e7083;font-size:9px;text-align:center;letter-spacing:.03em;line-height:1.5;margin:0}
+
+  /* --------------------------------------------------------------- Lobby */
+  #lobby-screen{justify-content:flex-start;padding-top:4px;gap:14px;overflow-y:auto;scrollbar-width:none}
+  #lobby-screen::-webkit-scrollbar{display:none}
+  .player-banner{
+    display:flex;align-items:center;gap:11px;border:1px solid var(--line);border-radius:6px;
+    background:rgba(7,27,44,.65);padding:10px 12px;
+  }
+  .slot-badge{
+    display:grid;place-items:center;width:38px;height:38px;border-radius:4px;
+    border:1px solid rgba(117,233,255,.24);background:rgba(117,233,255,.08);
+    color:var(--cyan);font-family:var(--font-narrow);font-size:15px;font-weight:800;flex:0 0 auto;
+  }
+  .player-banner h2{margin:0;font-family:var(--font-narrow);font-size:15px;font-weight:700;letter-spacing:.06em;line-height:1.1}
+  .player-banner p{margin:4px 0 0;color:#688a9d;font-size:8px;font-weight:700;letter-spacing:.12em;text-transform:uppercase}
+  .host-badge{
+    margin-left:auto;padding:4px 6px;border-radius:2px;background:var(--yellow);color:#181306;
+    font-size:7px;font-weight:800;letter-spacing:.1em;
+  }
+  .lobby-title{
+    margin:6px 0 0;font-family:var(--font-narrow);font-size:clamp(28px,8vw,38px);
+    font-weight:800;line-height:.94;letter-spacing:-.02em;text-transform:uppercase;
+  }
+  .lobby-sub{margin:8px 0 0;color:#86a4b5;font-size:11px;line-height:1.5}
+  .role-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:6px}
+  .role-card{
+    position:relative;min-height:146px;padding:14px 12px 13px;text-align:left;
+    border:1px solid rgba(118,211,240,.15);border-radius:7px;
+    background:linear-gradient(155deg,rgba(10,34,54,.8),rgba(4,15,26,.84));
+    transition:border-color .18s,background .18s,transform .15s,box-shadow .18s;
+    overflow:hidden;
+  }
+  .role-card::after{
+    content:"";position:absolute;inset:auto -30% -43% auto;width:120px;height:120px;border-radius:50%;
+    background:radial-gradient(circle,rgba(115,233,255,.12),transparent 68%);pointer-events:none;
+  }
+  .role-card:not(:disabled):active{transform:scale(.985)}
+  .role-card.selected{border-color:rgba(255,209,102,.7);background:linear-gradient(155deg,rgba(56,44,23,.78),rgba(11,24,36,.9));box-shadow:0 0 0 1px rgba(255,209,102,.12),0 10px 28px rgba(0,0,0,.2)}
+  .role-card.selected::before{
+    content:"DIPILIH";position:absolute;top:10px;right:9px;
+    color:#1a1407;background:var(--yellow);border-radius:2px;padding:3px 5px;
+    font-size:6.5px;font-weight:800;letter-spacing:.08em;
+  }
+  .role-card.locked.assigned::before{content:"PERANMU"}
+  .role-card.locked{opacity:.52}
+  .role-card.locked.assigned{opacity:1;border-color:rgba(113,242,192,.35)}
+  .role-icon{
+    display:grid;place-items:center;width:37px;height:37px;border-radius:4px;
+    border:1px solid rgba(117,233,255,.18);background:rgba(117,233,255,.06);
+    margin-bottom:17px;color:var(--cyan);
+  }
+  .role-card.selected .role-icon{border-color:rgba(255,209,102,.3);background:rgba(255,209,102,.08);color:var(--yellow)}
+  .role-icon svg{width:20px;height:20px;display:block}
+  .role-name{font-family:var(--font-narrow);font-size:20px;font-weight:800;letter-spacing:.01em;line-height:1;text-transform:uppercase}
+  .role-desc{margin:7px 0 0;color:#7594a6;font-size:9.5px;line-height:1.45}
+  .partner-card{
+    display:flex;align-items:center;gap:9px;padding:9px 11px;border-radius:5px;
+    border:1px solid rgba(118,211,240,.1);background:rgba(4,16,27,.52);
+  }
+  .partner-dot{width:6px;height:6px;border-radius:50%;background:#668090;flex:0 0 auto}
+  .partner-card.online .partner-dot{background:var(--green);box-shadow:0 0 7px rgba(113,242,192,.6)}
+  .partner-copy{min-width:0;flex:1}
+  .partner-copy b{display:block;color:#c9e2ed;font-size:10px;font-weight:600;line-height:1.2}
+  .partner-copy span{display:block;margin-top:3px;color:#68899b;font-size:8.5px;line-height:1.3}
+  .partner-role{
+    flex:0 0 auto;padding:4px 6px;border-radius:2px;background:rgba(117,233,255,.08);
+    color:#85dff3;font-size:7px;font-weight:800;letter-spacing:.08em;
+  }
+  .dist-card{
+    border:1px solid var(--line);border-radius:6px;background:rgba(7,27,44,.65);
+    padding:9px 12px;
+  }
+  .dist-btn-group{display:flex;gap:8px;margin-top:6px}
+  .dist-btn{
+    flex:1;padding:7px 0;border:1px solid rgba(118,211,240,.2);border-radius:4px;
+    background:rgba(2,12,21,.6);color:#88a7b7;font-family:var(--font-narrow);
+    font-size:12px;font-weight:800;letter-spacing:.08em;cursor:pointer;
+  }
+  .dist-btn.active{
+    color:#121006;background:var(--yellow);border-color:var(--yellow);
+    box-shadow:0 0 12px rgba(255,209,102,.25);
+  }
+  .lobby-hint{min-height:34px;margin:0;color:#7899aa;font-size:10px;line-height:1.55;display:flex;gap:7px;align-items:flex-start}
+  .lobby-hint::before{content:"›";color:var(--cyan);line-height:1.4;font-weight:700}
+  .start-btn{
+    width:100%;min-height:54px;border-radius:5px;padding:14px;
+    background:linear-gradient(135deg,#ffe497,var(--yellow) 56%,#f0ad2b);
+    color:#181307;font-weight:800;font-size:13px;letter-spacing:.11em;text-transform:uppercase;
+    box-shadow:0 10px 30px rgba(255,191,54,.2),inset 0 1px rgba(255,255,255,.4);
+    transition:transform .15s,opacity .15s;
+  }
+  .start-btn:not(:disabled):active{transform:scale(.988)}
+  .start-btn:disabled{opacity:.28;box-shadow:none}
+  .waiting-pulse{display:inline-flex;align-items:center;gap:7px}
+  .waiting-pulse i{width:5px;height:5px;border-radius:50%;background:var(--yellow);animation:blink 1.1s infinite}
+
+  /* --------------------------------------------------------------- Game common */
+  .game-top{
+    flex:0 0 auto;display:flex;justify-content:space-between;align-items:flex-start;gap:10px;
+    padding:4px 1px 12px;
+  }
+  .role-pill{
+    display:inline-flex;align-items:center;gap:6px;color:var(--cyan);
+    font-size:8px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;
+  }
+  .role-pill::before{content:"";width:5px;height:5px;border-radius:50%;background:var(--cyan);box-shadow:0 0 8px rgba(117,233,255,.8)}
+  .game-progress-mini{flex:1;max-width:165px;margin:2px 7px 0}
+  .game-progress-mini .labels{display:flex;justify-content:space-between;color:#638395;font-size:7.5px;font-weight:700;letter-spacing:.08em;margin-bottom:5px}
+  .game-progress-mini .labels b{color:#cce9f4;font-variant-numeric:tabular-nums}
+  .mini-bar{height:3px;border-radius:99px;background:rgba(139,195,217,.14);overflow:hidden}
+  .mini-fill{width:0%;height:100%;background:linear-gradient(90deg,var(--cyan),#e7fbff);box-shadow:0 0 9px rgba(117,233,255,.6);transition:width .2s linear}
+  .game-timer{color:#8aa9b9;font-family:var(--font-narrow);font-size:12px;font-weight:700;letter-spacing:.06em;font-variant-numeric:tabular-nums;text-align:right;flex:0 0 auto}
+  .game-timer small{display:block;margin-top:3px;color:#577a8e;font-family:var(--font);font-size:6.5px;letter-spacing:.15em;font-weight:700}
+
+  /* --------------------------------------------------------------- Driver */
+  #driver-screen{gap:10px}
+  .driver-telemetry{
+    flex:0 0 auto;display:flex;align-items:flex-end;justify-content:space-between;
+    padding:8px 0 2px;
+  }
+  .speed-readout{display:flex;align-items:baseline;gap:7px}
+  .speed-big{
+    font-family:var(--font-narrow);font-size:clamp(70px,23vw,104px);font-weight:800;line-height:.72;
+    letter-spacing:-.045em;font-variant-numeric:tabular-nums;color:#f5fcff;
+    text-shadow:0 0 40px rgba(117,233,255,.17);
+  }
+  .speed-unit{color:#7b99aa;font-size:10px;font-weight:700;letter-spacing:.13em;text-transform:uppercase}
+  .speed-side{text-align:right;padding-bottom:5px}
+  .speed-cap{display:block;color:#5b7e91;font-size:7px;font-weight:700;letter-spacing:.15em;text-transform:uppercase;margin-bottom:6px}
+  .speed-track{width:90px;height:3px;border-radius:99px;background:rgba(139,195,217,.15);overflow:hidden;margin-left:auto}
+  .speed-track-fill{height:100%;width:0%;background:linear-gradient(90deg,var(--cyan),var(--yellow),var(--red));transition:width .16s linear}
+  .driver-stage{flex:1 1 auto;min-height:20px;display:flex;align-items:center;justify-content:center;position:relative}
+  .driver-note{
+    text-align:center;color:#698b9d;font-size:10px;line-height:1.6;max-width:30ch;
+    transition:opacity .25s;
+  }
+  .driver-note strong{display:block;color:#c9e5f0;font-family:var(--font-narrow);font-size:18px;letter-spacing:.02em;margin-bottom:6px;text-transform:uppercase;font-weight:700}
+  .driver-note.warn strong{color:var(--yellow)}
+  .driver-controls{
+    flex:0 0 auto;display:flex;align-items:flex-end;gap:12px;
+    padding-top:7px;touch-action:none;
+  }
+  .steer-pad{flex:1;display:grid;grid-template-columns:1fr 1fr;gap:9px}
+  .control-btn{
+    position:relative;border:1px solid rgba(118,211,240,.22);border-radius:9px;
+    background:linear-gradient(155deg,rgba(15,48,72,.85),rgba(4,17,29,.95));
+    color:#d7f2fb;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;
+    touch-action:none;transition:transform .08s,background .08s,border-color .08s,box-shadow .08s;
+    overflow:hidden;box-shadow:inset 0 1px rgba(255,255,255,.035),0 9px 20px rgba(0,0,0,.2);
+  }
+  .control-btn::before{
+    content:"";position:absolute;inset:0;opacity:0;transition:opacity .08s;
+    background:radial-gradient(circle at 50% 35%,rgba(111,232,255,.2),transparent 65%);
+  }
+  .control-btn.pressed{transform:scale(.975);border-color:rgba(117,233,255,.65);box-shadow:inset 0 0 30px rgba(117,233,255,.1),0 0 26px rgba(117,233,255,.08)}
+  .control-btn.pressed::before{opacity:1}
+  .steer-btn{height:clamp(108px,17vh,156px)}
+  .steer-btn .arrow{font-family:var(--font-narrow);font-size:44px;line-height:1;font-weight:300;color:#edfaff;text-shadow:0 0 20px rgba(117,233,255,.18)}
+  .steer-btn .label{font-size:8px;font-weight:800;letter-spacing:.16em;text-transform:uppercase;color:#779aae}
+  .brake-btn{
+    flex:0 0 clamp(108px,29vw,148px);height:clamp(108px,17vh,156px);border-radius:9px;
+    border:1px solid rgba(255,89,110,.32);
+    background:linear-gradient(155deg,rgba(84,22,31,.92),rgba(31,7,13,.97));
+    color:#fff0f2;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;
+    touch-action:none;box-shadow:inset 0 1px rgba(255,255,255,.06),0 9px 25px rgba(50,0,8,.3);
+    transition:transform .08s,box-shadow .08s,background .08s,border-color .08s;
+  }
+  .brake-btn .brake-label{font-family:var(--font-narrow);font-size:clamp(24px,7vw,32px);font-weight:800;letter-spacing:.03em;line-height:1}
+  .brake-btn .brake-sub{font-size:7px;font-weight:800;letter-spacing:.16em;color:#ff9ca8;text-transform:uppercase}
+  .brake-btn .brake-ring{
+    position:absolute;inset:9px;border-radius:5px;border:1px solid rgba(255,95,114,.17);pointer-events:none;
+  }
+  .brake-btn.pressed{
+    transform:scale(.975);background:linear-gradient(155deg,rgba(134,31,45,.98),rgba(47,8,17,1));
+    border-color:rgba(255,95,114,.8);box-shadow:0 0 0 2px rgba(255,89,110,.09),inset 0 0 28px rgba(255,89,110,.18),0 0 30px rgba(255,50,75,.12);
+  }
+  .brake-btn.pressed .brake-sub{color:#ffd0d6}
+  .driver-caption{color:#55778a;font-size:8px;line-height:1.5;text-align:center;letter-spacing:.04em;padding-top:5px}
+
+  /* --------------------------------------------------------------- Navigator */
+  #navigator-screen{gap:10px;min-height:0}
+  .nav-turn-card{
+    flex:0 0 auto;display:flex;align-items:center;justify-content:space-between;gap:12px;
+    border:1px solid rgba(255,209,102,.26);border-radius:7px;
+    background:linear-gradient(135deg,rgba(58,45,21,.76),rgba(10,22,34,.9));
+    padding:12px 14px;position:relative;overflow:hidden;
+    transition:border-color .2s,background .2s;
+  }
+  .nav-turn-card::after{
+    content:"";position:absolute;right:-20px;top:-40px;width:125px;height:125px;border-radius:50%;
+    background:radial-gradient(circle,rgba(255,209,102,.12),transparent 68%);
+  }
+  .turn-lead{min-width:0;display:flex;align-items:center;gap:11px}
+  .turn-icon{
+    font-family:var(--font-narrow);font-size:39px;font-weight:400;line-height:.8;color:var(--yellow);
+    text-shadow:0 0 20px rgba(255,209,102,.25);flex:0 0 auto;
+  }
+  .turn-copy small{display:block;color:#a88a4d;font-size:7.5px;font-weight:800;letter-spacing:.16em;text-transform:uppercase;margin-bottom:4px}
+  .turn-copy strong{display:block;font-family:var(--font-narrow);font-size:clamp(21px,6.4vw,27px);font-weight:800;letter-spacing:.01em;line-height:.95;color:#fff7df}
+  .turn-meta{text-align:right;flex:0 0 auto;position:relative;z-index:1}
+  .turn-distance{font-family:var(--font-narrow);font-size:clamp(25px,8vw,35px);font-weight:800;line-height:.9;color:#fff7df;font-variant-numeric:tabular-nums}
+  .turn-distance em{font-style:normal;font-size:11px;color:#a88a4d;font-weight:700;margin-left:2px}
+  .turn-meta small{display:block;margin-top:5px;color:#8d7648;font-size:7px;font-weight:800;letter-spacing:.13em;text-transform:uppercase}
+  .nav-turn-card.urgent{border-color:rgba(255,89,110,.55);background:linear-gradient(135deg,rgba(72,27,26,.82),rgba(17,14,21,.93))}
+  .nav-turn-card.urgent .turn-icon,.nav-turn-card.urgent .turn-distance{color:#ffd0c8}
+  .nav-turn-card.urgent .turn-copy small,.nav-turn-card.urgent .turn-meta small{color:#d58680}
+  .nav-map-card{
+    position:relative;flex:1 1 auto;min-height:180px;border-radius:8px;overflow:hidden;
+    border:1px solid rgba(118,211,240,.17);
+    background:#041321;
+    box-shadow:inset 0 1px rgba(255,255,255,.025),0 15px 40px rgba(0,0,0,.24);
+  }
+  #nav-canvas{display:block;width:100%;height:100%;position:absolute;inset:0}
+  .map-overlay{
+    position:absolute;left:12px;top:11px;pointer-events:none;
+    color:rgba(204,239,250,.65);font-size:7px;font-weight:700;letter-spacing:.15em;text-transform:uppercase;
+    display:flex;align-items:center;gap:6px;
+  }
+  .map-overlay::before{content:"";width:4px;height:4px;background:var(--cyan);border-radius:50%;box-shadow:0 0 6px rgba(117,233,255,.8)}
+  .map-empty{
+    position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+    color:#507588;font-size:9px;font-weight:700;letter-spacing:.11em;text-transform:uppercase;text-align:center;padding:20px;
+  }
+  .nav-footer{
+    flex:0 0 auto;display:flex;align-items:center;justify-content:space-between;gap:12px;
+    padding:1px 2px 0;
+  }
+  .nav-progress{flex:1;min-width:0}
+  .nav-progress .labels{display:flex;justify-content:space-between;margin-bottom:6px;color:#67899b;font-size:7.5px;font-weight:700;letter-spacing:.09em;text-transform:uppercase}
+  .nav-progress .labels b{color:#ceeaf4;font-variant-numeric:tabular-nums}
+  .nav-stats{display:flex;gap:14px;flex:0 0 auto;text-align:right}
+  .nav-stat span{display:block;color:#587b8d;font-size:6.5px;font-weight:700;letter-spacing:.11em;text-transform:uppercase;margin-bottom:3px}
+  .nav-stat b{font-family:var(--font-narrow);font-size:12px;font-weight:700;color:#d4edf6;font-variant-numeric:tabular-nums}
+  .nav-tip{color:#4d7082;font-size:8px;text-align:center;line-height:1.5;letter-spacing:.03em}
+
+  /* --------------------------------------------------------------- Overlays */
+  .overlay{
+    position:fixed;inset:0;z-index:40;display:flex;align-items:center;justify-content:center;
+    padding:20px;background:rgba(1,7,13,.76);backdrop-filter:blur(7px);
+    animation:overlayIn .25s ease both;
+  }
+  @keyframes overlayIn{from{opacity:0}to{opacity:1}}
+  .overlay-card{
+    width:min(360px,100%);border:1px solid rgba(122,207,235,.22);border-radius:9px;
+    background:linear-gradient(160deg,rgba(11,32,51,.98),rgba(3,12,21,.99));
+    padding:26px 22px;text-align:center;
+    box-shadow:0 30px 100px rgba(0,0,0,.5),inset 0 1px rgba(255,255,255,.035);
+  }
+  .overlay-kicker{color:var(--red);font-size:8px;font-weight:800;letter-spacing:.2em;text-transform:uppercase;margin:0 0 9px}
+  .overlay-card.win .overlay-kicker{color:var(--green)}
+  .overlay-title{margin:0;font-family:var(--font-narrow);font-size:clamp(39px,12vw,55px);font-weight:800;line-height:.87;letter-spacing:-.03em;text-transform:uppercase}
+  .overlay-card.win .overlay-title{color:var(--yellow)}
+  .overlay-reason{margin:14px auto 0;max-width:30ch;color:#9cb9c9;font-size:11px;line-height:1.55}
+  .overlay-stats{display:flex;justify-content:center;gap:25px;margin:19px 0 21px;padding:14px 0;border-top:1px solid rgba(118,211,240,.12);border-bottom:1px solid rgba(118,211,240,.12)}
+  .overlay-stat span{display:block;color:#587b8d;font-size:7px;font-weight:700;letter-spacing:.13em;text-transform:uppercase;margin-bottom:5px}
+  .overlay-stat b{font-family:var(--font-narrow);font-size:18px;font-weight:700;color:#ecfaff;font-variant-numeric:tabular-nums}
+  .overlay-btn{
+    width:100%;min-height:50px;border-radius:5px;background:linear-gradient(135deg,#ffe497,var(--yellow) 56%,#f0ad2b);
+    color:#171206;font-weight:800;font-size:12px;letter-spacing:.11em;text-transform:uppercase;
+    box-shadow:0 9px 28px rgba(255,188,53,.17);transition:transform .15s,opacity .15s;
+  }
+  .overlay-btn:active{transform:scale(.987)}
+  .overlay-btn:disabled{opacity:.45;box-shadow:none}
+  .overlay-note{color:#688a9c;font-size:8.5px;line-height:1.5;margin:12px 0 0}
+  .overlay-note b{color:#9fc2d2;font-weight:600}
+  .overlay-close{
+    margin-top:10px;width:100%;min-height:44px;border-radius:5px;background:transparent;border:1px solid rgba(118,211,240,.2);
+    color:#8bafc0;font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;
+  }
+
+  #countdown-overlay{
+    position:fixed;inset:0;z-index:35;display:flex;flex-direction:column;align-items:center;justify-content:center;
+    pointer-events:none;
+    background:
+      radial-gradient(circle at 50% 46%,rgba(4,21,35,.84) 0%,rgba(2,12,21,.8) 38%,rgba(1,7,13,.72) 100%);
+    opacity:0;transition:opacity .18s;
+  }
+  #countdown-overlay.visible{opacity:1}
+  .count-num{
+    font-family:var(--font-narrow);font-size:clamp(120px,40vw,190px);font-weight:800;line-height:.8;
+    color:var(--yellow);text-shadow:0 0 60px rgba(255,209,102,.28);
+    animation:countPop .48s cubic-bezier(.18,.9,.25,1) both;
+  }
+  body.counting .driver-note,
+  body.counting .nav-turn-card{opacity:0}
+  .driver-note,.nav-turn-card{transition:opacity .18s}
+  .count-label{margin-top:20px;color:#d5eff8;font-size:9px;font-weight:800;letter-spacing:.24em;text-transform:uppercase;text-shadow:0 2px 12px #000}
+  .count-sub{margin-top:8px;color:#7d9fb1;font-size:9px;letter-spacing:.04em}
+  @keyframes countPop{0%{transform:scale(.55);opacity:0}30%{opacity:1}100%{transform:scale(1);opacity:1}}
+
+  #boom-overlay{
+    position:fixed;inset:0;z-index:38;pointer-events:none;display:grid;place-items:center;
+    background:radial-gradient(circle at 50% 45%,rgba(255,199,91,.92),rgba(241,88,36,.62) 26%,rgba(74,8,8,.28) 60%,transparent 78%);
+    opacity:0;transition:opacity .1s;
+  }
+  #boom-overlay.active{animation:boom .85s ease-out both}
+  #boom-overlay .boom-text{
+    font-family:var(--font-narrow);font-size:clamp(70px,22vw,120px);font-weight:800;color:#fff5d7;
+    text-shadow:0 0 70px rgba(255,117,32,.9);letter-spacing:.02em;transform:rotate(-6deg);
+  }
+  @keyframes boom{0%{opacity:0}7%{opacity:1}45%{opacity:.8}100%{opacity:0}}
+
+  #toast{
+    position:fixed;left:50%;bottom:calc(85px + var(--safe-bottom));transform:translate(-50%,8px);
+    z-index:70;max-width:min(340px,86vw);padding:9px 13px;border-radius:4px;
+    border:1px solid rgba(118,211,240,.23);background:rgba(4,18,30,.95);
+    color:#d0ecf6;font-size:10px;line-height:1.4;text-align:center;
+    box-shadow:0 10px 35px rgba(0,0,0,.35);opacity:0;pointer-events:none;transition:opacity .2s,transform .2s;
+  }
+  #toast.show{opacity:1;transform:translate(-50%,0)}
+  #rotate-hint{display:none}
+
+  @media (max-height:690px){
+    .topbar{padding-top:10px;padding-bottom:6px}
+    .driver-telemetry{padding-top:0}
+    .speed-big{font-size:clamp(58px,19vw,82px)}
+    .driver-note strong{font-size:15px}
+    .steer-btn{height:clamp(94px,15vh,120px)}
+    .brake-btn{height:clamp(94px,15vh,120px);flex-basis:clamp(94px,26vw,122px)}
+    .role-card{min-height:126px}
+    .role-icon{margin-bottom:12px}
+    .join-title{font-size:clamp(36px,11vw,50px)}
+    #join-screen{gap:14px;padding-bottom:3vh}
+  }
+  @media (max-width:360px){
+    main{padding-left:12px;padding-right:12px}
+    .topbar{padding-left:13px;padding-right:13px}
+    .role-name{font-size:17px}
+    .role-desc{font-size:8.5px}
+    .steer-pad{gap:7px}
+  }
+  @media (prefers-reduced-motion:reduce){
+    *,*::before,*::after{animation-duration:.01ms !important;animation-iteration-count:1 !important;transition-duration:.01ms !important}
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="topbar">
+    <div class="brand">
+      <div class="brand-mark"></div>
+      <div class="brand-copy">
+        <div class="brand-name">FAMILY GAME</div>
+        <div class="brand-sub">Driver &amp; Navigator / Controller</div>
+      </div>
+    </div>
+    <div class="conn-pill" id="conn-pill"><i></i><span>OFFLINE</span></div>
+  </header>
+
+  <main>
+    <section id="join-screen" class="screen active" aria-label="Join room">
+      <div class="join-head">
+        <div class="eyebrow">Remote / kendali keluarga</div>
+        <h1 class="join-title">Masuk<br><em>Room.</em></h1>
+        <p class="join-desc">Scan QR dari layar game, atau masukkan kode room. Satu HP untuk satu pemain.</p>
+      </div>
+      <form class="room-form" id="room-form">
+        <label class="field-label" for="room-input">Kode room</label>
+        <div class="room-entry">
+          <input id="room-input" name="room" type="text" inputmode="text" autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="8" placeholder="ABCDE" aria-label="Kode room" />
+          <button id="join-btn" class="join-btn" type="submit">Masuk</button>
+        </div>
+        <p class="join-error" id="join-error"></p>
+        <div class="join-note">
+          <span class="dot"></span>
+          <span>Pemain pertama menjadi <b>Host (P1)</b>. Pemain kedua otomatis mendapat peran yang tersisa.</span>
+        </div>
+      </form>
+      <p class="connect-hint" id="connect-hint">Pastikan HP dan PC berada di jaringan yang stabil.</p>
+    </section>
+
+    <section id="lobby-screen" class="screen" aria-label="Lobby">
+      <div class="player-banner">
+        <div class="slot-badge" id="my-slot">P1</div>
+        <div>
+          <h2 id="my-player-name">PLAYER 1</h2>
+          <p id="my-player-sub">Menunggu room</p>
+        </div>
+        <span class="host-badge" id="host-badge">HOST</span>
+      </div>
+      <h2 class="lobby-title" id="lobby-title">Pilih peran</h2>
+      <p class="lobby-sub" id="lobby-sub">Navigator membaca peta. Driver mengikuti jalan dan rem.</p>
+      <div class="role-grid">
+        <button type="button" class="role-card" data-role="driver">
+          <div class="role-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M4 15.5 6.5 8a2 2 0 0 1 1.9-1.4h7.2A2 2 0 0 1 17.5 8L20 15.5"/>
+              <path d="M3.5 15.5h17v3.2h-2.2v-1.4H5.7v1.4H3.5z"/>
+              <circle cx="7.2" cy="17.3" r="1"/><circle cx="16.8" cy="17.3" r="1"/>
+              <path d="M8 15.5h8"/>
+            </svg>
+          </div>
+          <div class="role-name">Driver</div>
+          <p class="role-desc">Kemudi kiri / kanan, tahan rem di tikungan tajam.</p>
+        </button>
+        <button type="button" class="role-card" data-role="navigator">
+          <div class="role-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="m9 18-6 3V6l6-3 6 3 6-3v15l-6 3z"/>
+              <path d="M9 3v15"/><path d="M15 6v15"/>
+            </svg>
+          </div>
+          <div class="role-name">Navigator</div>
+          <p class="role-desc">Baca rute putih di peta biru, beri tahu tikungan berikutnya.</p>
+        </button>
+      </div>
+      <div class="dist-card" id="dist-card">
+        <span class="field-label">Target Jarak Finish:</span>
+        <div class="dist-btn-group" id="dist-btn-group">
+          <button type="button" class="dist-btn active" data-dist="1000">1 KM</button>
+          <button type="button" class="dist-btn" data-dist="3000">3 KM</button>
+          <button type="button" class="dist-btn" data-dist="5000">5 KM</button>
+        </div>
+      </div>
+      <div class="partner-card" id="partner-card">
+        <span class="partner-dot"></span>
+        <div class="partner-copy">
+          <b id="partner-name">Player 2</b>
+          <span id="partner-status">Belum bergabung</span>
+        </div>
+        <span class="partner-role" id="partner-role">—</span>
+      </div>
+      <p class="lobby-hint" id="lobby-hint">Menunggu data lobby...</p>
+      <button type="button" class="start-btn" id="start-btn" disabled>Mulai Game</button>
+    </section>
+
+    <section id="driver-screen" class="screen" aria-label="Kontrol driver">
+      <div class="game-top">
+        <div>
+          <div class="role-pill">Driver / kemudi</div>
+        </div>
+        <div class="game-progress-mini">
+          <div class="labels"><span>RUTE</span><b><span id="driver-progress">0</span> / <span class="max-dist-val">1000</span></b></div>
+          <div class="mini-bar"><div class="mini-fill" id="driver-progress-fill"></div></div>
+        </div>
+        <div class="game-timer"><span id="driver-timer">00:00.00</span><small>WAKTU</small></div>
+      </div>
+      <div class="driver-telemetry">
+        <div class="speed-readout"><span class="speed-big" id="driver-speed">0</span><span class="speed-unit">km/j</span></div>
+        <div class="speed-side">
+          <span class="speed-cap">Maks 200</span>
+          <div class="speed-track"><div class="speed-track-fill" id="driver-speed-fill"></div></div>
+        </div>
+      </div>
+      <div class="driver-stage">
+        <div class="driver-note" id="driver-note"><strong>Fokus ke jalan</strong>Mobil melaju otomatis. Kamu hanya mengatur arah dan rem.</div>
+      </div>
+      <div class="driver-controls" id="driver-controls">
+        <div class="steer-pad">
+          <button type="button" class="control-btn steer-btn" data-control="left" aria-label="Belok kiri">
+            <span class="arrow">←</span><span class="label">Kiri</span>
+          </button>
+          <button type="button" class="control-btn steer-btn" data-control="right" aria-label="Belok kanan">
+            <span class="arrow">→</span><span class="label">Kanan</span>
+          </button>
+        </div>
+        <button type="button" class="brake-btn" data-control="brake" aria-label="Rem, tahan">
+          <span class="brake-ring"></span>
+          <span class="brake-label">REM</span><span class="brake-sub">Tahan</span>
+        </button>
+      </div>
+      <div class="driver-caption">Tekan dan tahan tombol. Lepas untuk melepas rem / lurus.</div>
+    </section>
+
+    <section id="navigator-screen" class="screen" aria-label="Peta navigator">
+      <div class="game-top">
+        <div><div class="role-pill">Navigator / peta</div></div>
+        <div class="game-progress-mini">
+          <div class="labels"><span>RUTE</span><b><span id="nav-progress">0</span> / <span class="max-dist-val">1000</span></b></div>
+          <div class="mini-bar"><div class="mini-fill" id="nav-progress-fill"></div></div>
+        </div>
+        <div class="game-timer"><span id="nav-timer">00:00.00</span><small>WAKTU</small></div>
+      </div>
+      <div class="nav-turn-card" id="turn-card">
+        <div class="turn-lead">
+          <div class="turn-icon" id="turn-icon">↱</div>
+          <div class="turn-copy"><small id="turn-caption">Tikungan berikutnya</small><strong id="turn-name">Menunggu peta</strong></div>
+        </div>
+        <div class="turn-meta"><div class="turn-distance"><span id="turn-distance">—</span><em id="turn-unit">m</em></div><small id="turn-angle">—</small></div>
+      </div>
+      <div class="nav-map-card">
+        <canvas id="nav-canvas" aria-label="Peta rute 2D"></canvas>
+        <div class="map-overlay">Live route / <span id="nav-map-dist">1 KM</span></div>
+        <div class="map-empty" id="map-empty">Menunggu rute dari game...</div>
+      </div>
+      <div class="nav-footer">
+        <div class="nav-progress">
+          <div class="labels"><span>Progres</span><b id="nav-distance-label">0 / 1000 m</b></div>
+          <div class="mini-bar"><div class="mini-fill" id="nav-distance-fill"></div></div>
+        </div>
+        <div class="nav-stats">
+          <div class="nav-stat"><span>Kecepatan</span><b id="nav-speed">0 km/j</b></div>
+        </div>
+      </div>
+      <p class="nav-tip">Peta diperbarui real-time dari mobil. Pandu driver lebih awal di tikungan 180°.</p>
+    </section>
+  </main>
+</div>
+
+<div id="countdown-overlay">
+  <div class="count-num" id="count-num">5</div>
+  <div class="count-label" id="count-label">Bersiap</div>
+  <div class="count-sub" id="count-sub">Tahan rem saat tikungan tajam</div>
+</div>
+
+<div id="boom-overlay"><div class="boom-text">DUAR!</div></div>
+
+<div id="end-overlay" class="overlay" hidden>
+  <div class="overlay-card" id="end-card">
+    <p class="overlay-kicker" id="end-kicker">Crash detected</p>
+    <h2 class="overlay-title" id="end-title">Mobil<br>Meledak</h2>
+    <p class="overlay-reason" id="end-reason">Kendaraan tidak bisa bergerak selama 5 detik.</p>
+    <div class="overlay-stats">
+      <div class="overlay-stat"><span>Jarak</span><b id="end-progress">0 m</b></div>
+      <div class="overlay-stat"><span>Waktu</span><b id="end-time">00:00.00</b></div>
+    </div>
+    <button type="button" class="overlay-btn" id="retry-btn">↻ Ulangi</button>
+    <p class="overlay-note" id="end-note">Player 1 dapat mengulang dari sini.</p>
+  </div>
+</div>
+
+<div id="disconnect-overlay" class="overlay" hidden>
+  <div class="overlay-card">
+    <p class="overlay-kicker">Signal lost</p>
+    <h2 class="overlay-title">Koneksi<br>Terputus</h2>
+    <p class="overlay-reason" id="disconnect-reason">HP tidak lagi terhubung ke game di desktop.</p>
+    <button type="button" class="overlay-btn" id="reconnect-btn" style="margin-top:18px">Sambung Ulang</button>
+    <button type="button" class="overlay-close" id="disconnect-close">Kembali ke kode room</button>
+  </div>
+</div>
+
+<div id="toast" role="status"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js" crossorigin="anonymous"></script>
+<script>
+/* =========================================================================
+   CONTROLLER — GitHub Pages client
+   Connects to the itch.io host via PeerJS. Keep PEER_PREFIX identical to
+   the value in index.html.
+   ========================================================================= */
+(() => {
+  'use strict';
+
+  const PEER_PREFIX = 'fgdn-';
+  const ROOM_PATTERN = /^[A-Z0-9]{4,8}$/;
+
+  const state = {
+    room: '',
+    peer: null,
+    conn: null,
+    connected: false,
+    connecting: false,
+    me: { slot: 'p1', isHost: false },
+    role: null,
+    hostRole: null,
+    phase: 'lobby',
+    roles: { p1: null, p2: null },
+    players: {
+      p1: { connected: false, role: null },
+      p2: { connected: false, role: null }
+    },
+    canStart: false,
+    route: null,
+    telemetry: {},
+    result: null,
+    connectionStartedAt: 0,
+    lastPhase: 'lobby',
+    countShown: null,
+    joinErrorTimer: 0,
+    wakeLock: null,
+    pointerControls: new Map(),
+    inputState: { steer: 0, brake: false },
+    lastSentInput: '',
+    navDirty: true,
+    navRaf: 0,
+    navLastDraw: 0,
+    mapEmpty: true
+  };
+
+  const $ = (selector) => document.querySelector(selector);
+  const $$ = (selector) => Array.from(document.querySelectorAll(selector));
+
+  const dom = {
+    connPill: $('#conn-pill'),
+    joinScreen: $('#join-screen'),
+    lobbyScreen: $('#lobby-screen'),
+    driverScreen: $('#driver-screen'),
+    navigatorScreen: $('#navigator-screen'),
+    roomForm: $('#room-form'),
+    roomInput: $('#room-input'),
+    joinBtn: $('#join-btn'),
+    joinError: $('#join-error'),
+    connectHint: $('#connect-hint'),
+    mySlot: $('#my-slot'),
+    myPlayerName: $('#my-player-name'),
+    myPlayerSub: $('#my-player-sub'),
+    hostBadge: $('#host-badge'),
+    lobbyTitle: $('#lobby-title'),
+    lobbySub: $('#lobby-sub'),
+    roleCards: $$('.role-card'),
+    partnerCard: $('#partner-card'),
+    partnerName: $('#partner-name'),
+    partnerStatus: $('#partner-status'),
+    partnerRole: $('#partner-role'),
+    lobbyHint: $('#lobby-hint'),
+    startBtn: $('#start-btn'),
+    countdownOverlay: $('#countdown-overlay'),
+    countNum: $('#count-num'),
+    countLabel: $('#count-label'),
+    countSub: $('#count-sub'),
+    endOverlay: $('#end-overlay'),
+    endCard: $('#end-card'),
+    endKicker: $('#end-kicker'),
+    endTitle: $('#end-title'),
+    endReason: $('#end-reason'),
+    endProgress: $('#end-progress'),
+    endTime: $('#end-time'),
+    endNote: $('#end-note'),
+    retryBtn: $('#retry-btn'),
+    boomOverlay: $('#boom-overlay'),
+    disconnectOverlay: $('#disconnect-overlay'),
+    disconnectReason: $('#disconnect-reason'),
+    reconnectBtn: $('#reconnect-btn'),
+    disconnectClose: $('#disconnect-close'),
+    toast: $('#toast'),
+    driverSpeed: $('#driver-speed'),
+    driverSpeedFill: $('#driver-speed-fill'),
+    driverProgress: $('#driver-progress'),
+    driverProgressFill: $('#driver-progress-fill'),
+    driverTimer: $('#driver-timer'),
+    driverNote: $('#driver-note'),
+    navProgress: $('#nav-progress'),
+    navProgressFill: $('#nav-progress-fill'),
+    navTimer: $('#nav-timer'),
+    navSpeed: $('#nav-speed'),
+    navDistanceLabel: $('#nav-distance-label'),
+    navDistanceFill: $('#nav-distance-fill'),
+    navCanvas: $('#nav-canvas'),
+    mapEmpty: $('#map-empty'),
+    turnCard: $('#turn-card'),
+    turnIcon: $('#turn-icon'),
+    turnCaption: $('#turn-caption'),
+    turnName: $('#turn-name'),
+    turnDistance: $('#turn-distance'),
+    turnUnit: $('#turn-unit'),
+    turnAngle: $('#turn-angle'),
+    controls: $$('[data-control]')
+  };
+
+  /* --------------------------------------------------------------- Utilities */
+  const clamp = (v, min, max) => Math.max(min, Math.min(max, v));
+  const formatTime = (seconds) => {
+    const t = Math.max(0, Number(seconds) || 0);
+    const m = Math.floor(t / 60);
+    const s = Math.floor(t % 60);
+    const cs = Math.floor((t % 1) * 100);
+    return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}.${String(cs).padStart(2, '0')}`;
+  };
+  const roleName = (role) => role === 'driver' ? 'Driver' : (role === 'navigator' ? 'Navigator' : '—');
+  const opposite = (role) => role === 'driver' ? 'navigator' : 'driver';
+
+  function normalizeRoom(value) {
+    return String(value || '').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 8);
+  }
+
+  function getQueryRoom() {
+    const params = new URLSearchParams(location.search);
+    return normalizeRoom(params.get('room') || params.get('r') || '');
+  }
+
+  function setQueryRoom(room) {
+    try {
+      const url = new URL(location.href);
+      url.searchParams.set('room', room);
+      history.replaceState(null, '', url.toString());
+    } catch {/* ignore */}
+  }
+
+  function showScreen(name) {
+    const screens = {
+      join: dom.joinScreen,
+      lobby: dom.lobbyScreen,
+      driver: dom.driverScreen,
+      navigator: dom.navigatorScreen
+    };
+    Object.entries(screens).forEach(([key, el]) => {
+      el.classList.toggle('active', key === name);
+    });
+  }
+
+  function setConnPill(mode, label) {
+    dom.connPill.classList.remove('connecting', 'connected', 'error');
+    if (mode) dom.connPill.classList.add(mode);
+    dom.connPill.querySelector('span').textContent = label;
+  }
+
+  function toast(message) {
+    dom.toast.textContent = message;
+    dom.toast.classList.add('show');
+    clearTimeout(state.joinErrorTimer);
+    state.joinErrorTimer = setTimeout(() => dom.toast.classList.remove('show'), 2600);
+  }
+
+  function setJoinError(message) {
+    dom.joinError.textContent = message || '';
+  }
+
+  function setJoinLoading(loading) {
+    dom.joinBtn.disabled = loading;
+    dom.roomInput.disabled = loading;
+    dom.joinBtn.textContent = loading ? '...' : 'Masuk';
+  }
+
+  function haptic(pattern) {
+    try {
+      if (navigator.vibrate) navigator.vibrate(pattern);
+    } catch {/* unsupported */}
+  }
+
+  async function acquireWakeLock() {
+    if (!('wakeLock' in navigator) || state.wakeLock) return;
+    try {
+      state.wakeLock = await navigator.wakeLock.request('screen');
+      state.wakeLock.addEventListener('release', () => { state.wakeLock = null; });
+    } catch {/* denied / unsupported */}
+  }
+
+  /* ------------------------------------------------------------- Connection */
+  function cleanupConnection({ closePeer = true } = {}) {
+    clearTimeout(state.connectionTimeout);
+    if (state.conn) {
+      try { state.conn.close(); } catch {/* noop */}
+      state.conn = null;
+    }
+    if (closePeer && state.peer) {
+      try { state.peer.destroy(); } catch {/* noop */}
+      state.peer = null;
+    }
+    state.connected = false;
+    state.connecting = false;
+  }
+
+  function connect(room) {
+    const normalized = normalizeRoom(room);
+    if (!ROOM_PATTERN.test(normalized)) {
+      setJoinError('Kode room harus 4–8 huruf/angka.');
+      return;
+    }
+    if (typeof window.Peer === 'undefined') {
+      setJoinError('PeerJS gagal dimuat. Periksa internet lalu muat ulang halaman.');
+      setConnPill('error', 'CDN ERROR');
+      return;
+    }
+    cleanupConnection(true);
+    state.room = normalized;
+    state.role = null;
+    state.phase = 'lobby';
+    state.result = null;
+    state.route = null;
+    state.telemetry = {};
+    state.joinErrorTimer = 0;
+    state.connecting = true;
+    setJoinError('');
+    setJoinLoading(true);
+    setConnPill('connecting', 'MENGHUBUNGKAN');
+    dom.connectHint.textContent = `Mencari room ${normalized}...`;
+    setQueryRoom(normalized);
+    showScreen('join');
+    dom.roomInput.value = normalized;
+
+    try {
+      state.peer = new Peer({ debug: 1 });
+    } catch (error) {
+      setJoinLoading(false);
+      state.connecting = false;
+      setJoinError('PeerJS tidak bisa dimulai di browser ini.');
+      setConnPill('error', 'ERROR');
+      return;
+    }
+
+    const peer = state.peer;
+    let settled = false;
+    state.connectionTimeout = setTimeout(() => {
+      if (settled || state.connected) return;
+      settled = true;
+      setJoinLoading(false);
+      state.connecting = false;
+      setJoinError('Waktu habis. Pastikan game desktop masih terbuka dan kode room benar.');
+      setConnPill('error', 'TIMEOUT');
+      cleanupConnection(true);
+    }, 15000);
+
+    peer.on('open', () => {
+      if (state.peer !== peer) return;
+      setConnPill('connecting', 'MENYAMBUNG');
+      let conn;
+      try {
+        conn = peer.connect(PEER_PREFIX + normalized, {
+          reliable: true,
+          serialization: 'json'
+        });
+      } catch (error) {
+        setJoinLoading(false);
+        state.connecting = false;
+        setJoinError('Tidak dapat membuka kanal data.');
+        setConnPill('error', 'ERROR');
+        return;
+      }
+      state.conn = conn;
+      bindConnection(conn);
+    });
+
+    peer.on('error', (error) => {
+      if (state.peer !== peer) return;
+      const type = error && error.type ? error.type : 'unknown';
+      console.warn('[FGDN controller] PeerJS error', error);
+      if (type === 'peer-unavailable') {
+        clearTimeout(state.connectionTimeout);
+        setJoinLoading(false);
+        state.connecting = false;
+        setJoinError(`Room "${normalized}" tidak ditemukan. Cek kode atau minta QR baru.`);
+        setConnPill('error', 'ROOM TIDAK ADA');
+        cleanupConnection(true);
+        return;
+      }
+      if (state.connected) {
+        setConnPill('error', 'KONEKSI BERMASALAH');
+        return;
+      }
+      setJoinLoading(false);
+      state.connecting = false;
+      setJoinError(type === 'network' ? 'Jaringan bermasalah. Coba lagi.' : 'Gagal terhubung ke server PeerJS.');
+      setConnPill('error', 'ERROR');
+      clearTimeout(state.connectionTimeout);
+      cleanupConnection(true);
+    });
+
+    peer.on('disconnected', () => {
+      if (state.connected) {
+        setConnPill('connecting', 'RECONNECT');
+      }
+    });
+  }
+
+  function bindConnection(conn) {
+    conn.on('open', () => {
+      clearTimeout(state.connectionTimeout);
+      state.connecting = true;
+      setConnPill('connecting', 'HANDSHAKE');
+      try {
+        conn.send({ type: 'hello', version: 1, ua: navigator.userAgent.slice(0, 120) });
+      } catch (error) {
+        setJoinLoading(false);
+        setJoinError('Gagal mengirim handshake.');
+        cleanupConnection(true);
+      }
+    });
+
+    conn.on('data', (raw) => {
+      const msg = raw && typeof raw === 'object' ? raw : null;
+      if (!msg || typeof msg.type !== 'string') return;
+      handleMessage(msg);
+    });
+
+    conn.on('close', () => {
+      if (!state.connected && state.connecting) {
+        setJoinLoading(false);
+        state.connecting = false;
+        setJoinError('Koneksi ditutup oleh game. Coba scan QR terbaru.');
+        setConnPill('error', 'TERPUTUS');
+        return;
+      }
+      state.connected = false;
+      showDisconnected('Koneksi ke game terputus.');
+    });
+
+    conn.on('error', () => {
+      if (!state.connected) {
+        setJoinError('Kanal data gagal. Coba lagi.');
+        setConnPill('error', 'ERROR');
+        return;
+      }
+      showDisconnected('Terjadi kesalahan pada koneksi data.');
+    });
+  }
+
+  function showDisconnected(message) {
+    setConnPill('error', 'TERPUTUS');
+    releaseAllInputs();
+    dom.disconnectReason.textContent = message || 'HP tidak lagi terhubung ke game di desktop.';
+    dom.disconnectOverlay.hidden = false;
+    setCountdownVisible(false);
+    dom.endOverlay.hidden = true;
+    dom.boomOverlay.classList.remove('active');
+  }
+
+  function handleMessage(msg) {
+    switch (msg.type) {
+      case 'welcome':
+        state.connected = true;
+        state.connecting = false;
+        clearTimeout(state.connectionTimeout);
+        setJoinLoading(false);
+        setJoinError('');
+        state.room = normalizeRoom(msg.room || state.room);
+        state.me = { slot: msg.slot, isHost: Boolean(msg.isHost) };
+        state.hostRole = msg.hostRole || 'driver';
+        state.role = msg.role || (msg.slot === 'p1' ? state.hostRole : (state.hostRole === 'driver' ? 'navigator' : 'driver'));
+        state.phase = msg.phase || 'lobby';
+        state.roles = msg.roles && (msg.roles.p1 || msg.roles.p2) ? msg.roles : {
+          p1: state.hostRole,
+          p2: state.hostRole === 'driver' ? 'navigator' : 'driver'
+        };
+        state.players = msg.players || state.players;
+        state.canStart = true;
+        setQueryRoom(state.room);
+        setConnPill('connected', 'TERHUBUNG');
+        dom.roomInput.value = state.room;
+        dom.connectHint.textContent = `Terhubung ke room ${state.room}.`;
+        dom.disconnectOverlay.hidden = true;
+        acquireWakeLock();
+        if (state.phase === 'lobby') showLobby();
+        else showGameFromPhase();
+        break;
+      case 'lobby':
+        updateLobbyState(msg);
+        if (state.phase === 'lobby' || msg.phase === 'lobby') showLobby();
+        break;
+      case 'state':
+        if (msg.roles) state.roles = msg.roles;
+        if (msg.players) state.players = msg.players;
+        state.phase = msg.phase || state.phase;
+        if (msg.result) state.result = msg.result;
+        if (msg.mode) state.mode = msg.mode;
+        if (msg.phase === 'countdown') {
+          state.result = null;
+          dom.endOverlay.hidden = true;
+          dom.boomOverlay.classList.remove('active');
+          if (typeof msg.countdown === 'number') updateCountdown(msg.countdown);
+        }
+        if (msg.phase === 'playing') {
+          dom.endOverlay.hidden = true;
+          setCountdownVisible(false);
+          if (state.lastPhase === 'countdown') haptic([35, 50, 80]);
+        }
+        if (msg.phase === 'exploding') {
+          dom.endOverlay.hidden = true;
+          triggerBoom();
+          setConnPill('connected', 'GAME OVER');
+        }
+        if (msg.phase === 'gameover') {
+          showEndOverlay('lose', msg.result || state.result);
+        } else if (msg.phase === 'win') {
+          showEndOverlay('win', msg.result || state.result);
+        }
+        handlePhaseChange(msg.phase);
+        break;
+      case 'track':
+        receiveTrack(msg);
+        break;
+      case 'telemetry':
+        applyTelemetry(msg);
+        break;
+      case 'notice':
+        toast(msg.message || 'Info dari game.');
+        break;
+      case 'rejected':
+        state.connected = false;
+        state.connecting = false;
+        setJoinLoading(false);
+        setConnPill('error', 'DITOLAK');
+        setJoinError(msg.reason || 'Room tidak menerima koneksi.');
+        showScreen('join');
+        cleanupConnection(true);
+        break;
+      case 'pong':
+        break;
+      default:
+        break;
+    }
+  }
+
+  function updateLobbyState(msg) {
+    if (msg.phase) state.phase = msg.phase;
+    if (msg.roles) state.roles = msg.roles;
+    if (msg.players) state.players = msg.players;
+    if (typeof msg.hostRole !== 'undefined') state.hostRole = msg.hostRole || 'driver';
+    if (typeof msg.role !== 'undefined') state.role = msg.role;
+    if (msg.you) state.me = { ...state.me, ...msg.you };
+    if (!state.roles.p1 && state.hostRole) {
+      state.roles.p1 = state.hostRole;
+      state.roles.p2 = state.hostRole === 'driver' ? 'navigator' : 'driver';
+    }
+    if (!state.role && state.me.slot) {
+      state.role = state.roles[state.me.slot] || (state.me.slot === 'p1' ? state.hostRole : (state.hostRole === 'driver' ? 'navigator' : 'driver'));
+    }
+    state.canStart = true;
+  }
+
+  function handlePhaseChange(phase) {
+    if (!phase) return;
+    if (phase === 'lobby') {
+      showLobby();
+    } else if (phase === 'countdown' || phase === 'playing' || phase === 'exploding') {
+      showGameFromPhase();
+      if (phase === 'countdown') {
+        setConnPill('connected', 'COUNTDOWN');
+        showCountdownOverlay();
+      } else {
+        setConnPill('connected', phase === 'exploding' ? 'CRASH' : 'BERMAIN');
+        setCountdownVisible(false);
+      }
+    } else if (phase === 'gameover' || phase === 'win') {
+      // The controller stays on the relevant control screen behind the modal.
+      if (!state.role) showLobby();
+      else showGameFromPhase(true);
+      setCountdownVisible(false);
+    }
+    state.lastPhase = phase;
+  }
+
+  /* ---------------------------------------------------------------- Lobby UI */
+  function showLobby() {
+    state.phase = state.phase || 'lobby';
+    renderLobby();
+    showScreen('lobby');
+    dom.endOverlay.hidden = true;
+    dom.disconnectOverlay.hidden = true;
+    setCountdownVisible(false);
+    dom.boomOverlay.classList.remove('active');
+    setConnPill('connected', 'LOBBY');
+  }
+
+  function renderLobby() {
+    const isHost = state.me.isHost;
+    const slot = state.me.slot || 'p1';
+    const myRole = state.roles[slot] || state.role || null;
+    const partnerSlot = slot === 'p1' ? 'p2' : 'p1';
+    const partner = state.players[partnerSlot] || { connected: false, role: null };
+    const bothConnected = Boolean(state.players.p1 && state.players.p1.connected) &&
+      Boolean(state.players.p2 && state.players.p2.connected);
+
+    dom.mySlot.textContent = slot.toUpperCase();
+    dom.myPlayerName.textContent = `PLAYER ${slot === 'p1' ? '1' : '2'}`;
+    dom.myPlayerSub.textContent = isHost ? 'Host / room master' : 'Bergabung sebagai tamu';
+    dom.hostBadge.hidden = !isHost;
+    dom.lobbyTitle.textContent = isHost ? 'Pilih peran' : 'Peranmu';
+    dom.lobbySub.textContent = isHost
+      ? 'Pilih satu peran. Player 2 otomatis mendapat peran lainnya.'
+      : 'Peran ditentukan oleh Player 1.';
+
+    dom.roleCards.forEach((card) => {
+      const role = card.dataset.role;
+      const selected = myRole === role;
+      const assigned = !isHost && selected;
+      card.classList.toggle('selected', selected);
+      card.classList.toggle('locked', !isHost);
+      card.classList.toggle('assigned', assigned);
+      card.disabled = !isHost || state.phase !== 'lobby';
+      card.setAttribute('aria-pressed', selected ? 'true' : 'false');
+      // Update small assigned marker text on P2's chosen card.
+      if (assigned) {
+        card.setAttribute('data-assigned', '1');
+      } else {
+        card.removeAttribute('data-assigned');
+      }
+    });
+
+    const partnerConnected = Boolean(partner.connected);
+    dom.partnerCard.classList.toggle('online', partnerConnected);
+    dom.partnerName.textContent = `PLAYER ${partnerSlot === 'p1' ? '1' : '2'}`;
+    if (!partnerConnected) {
+      dom.partnerStatus.textContent = 'Belum bergabung';
+      dom.partnerRole.textContent = '—';
+    } else if (partner.role) {
+      dom.partnerStatus.textContent = partnerSlot === 'p1' ? 'Host siap' : 'Siap bermain';
+      dom.partnerRole.textContent = partner.role === 'driver' ? 'DRIVER' : 'NAVIGATOR';
+    } else {
+      dom.partnerStatus.textContent = 'Menunggu peran dipilih';
+      dom.partnerRole.textContent = 'MENUNGGU';
+    }
+
+    let hint = '';
+    let canStart = false;
+    if (isHost) {
+      if (!myRole) {
+        hint = 'Pilih peran di atas untuk membuka tombol mulai.';
+      } else if (!partnerConnected && myRole === 'navigator') {
+        hint = 'Kamu memilih Navigator. Butuh Player 2 sebagai Driver sebelum bisa mulai.';
+      } else if (!partnerConnected && myRole === 'driver') {
+        hint = 'Player 2 belum masuk. Kamu tetap bisa memulai sendiri; peran Navigator kosong.';
+        canStart = true;
+      } else {
+        hint = 'Semua siap. Tekan MULAI GAME untuk memulai hitungan 5 detik.';
+        canStart = true;
+      }
+    } else {
+      if (!state.hostRole) {
+        hint = 'Menunggu Player 1 memilih peran. Peranmu akan muncul otomatis.';
+      } else if (myRole) {
+        hint = `Kamu mendapat peran ${myRole === 'driver' ? 'Driver' : 'Navigator'}. Menunggu P1 menekan mulai.`;
+      } else {
+        hint = 'Menunggu Player 1 memulai game.';
+      }
+    }
+    // The host's own start is allowed with one driver, but never with an
+    // unassigned role; also lock it if the server says otherwise.
+    state.canStart = Boolean(isHost && myRole && (canStart || state.canStart) && state.phase === 'lobby');
+    dom.lobbyHint.textContent = hint;
+    dom.startBtn.hidden = !isHost;
+    dom.startBtn.disabled = !state.canStart;
+    dom.startBtn.innerHTML = state.canStart
+      ? '<span class="waiting-pulse"><i></i> Mulai Game</span>'
+      : 'Mulai Game';
+    dom.startBtn.disabled = !state.canStart;
+
+    if (bothConnected && state.hostRole) {
+      setConnPill('connected', 'SIAP');
+    }
+
+    const distCard = $('#dist-card');
+    if (distCard) distCard.style.display = isHost ? 'block' : 'none';
+  }
+
+  function updateMaxDistanceLabels(length) {
+    const len = Number(length) || 1000;
+    state.targetLength = len;
+    $$('.max-dist-val').forEach(el => el.textContent = String(len));
+    const navDist = $('#nav-map-dist');
+    if (navDist) navDist.textContent = `${len / 1000} KM`;
+    $$('#dist-btn-group .dist-btn').forEach(btn => {
+      btn.classList.toggle('active', Number(btn.dataset.dist) === len);
+    });
+  }
+
+  $$('#dist-btn-group .dist-btn').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      if (!state.me.isHost || state.phase !== 'lobby' || !state.connected) return;
+      const len = Number(btn.dataset.dist) || 1000;
+      updateMaxDistanceLabels(len);
+      send({ type: 'setTrackLength', length: len });
+      haptic(15);
+    });
+  });
+
+  dom.roleCards.forEach((card) => {
+    card.addEventListener('click', () => {
+      if (!state.me.isHost || state.phase !== 'lobby' || !state.connected) return;
+      const role = card.dataset.role;
+      if (!role) return;
+      state.role = role;
+      state.roles.p1 = role;
+      state.roles.p2 = state.players.p2.connected ? opposite(role) : state.roles.p2;
+      renderLobby();
+      send({ type: 'setRole', role });
+      haptic(18);
+    });
+  });
+
+  dom.startBtn.addEventListener('click', () => {
+    if (!state.me.isHost || !state.connected || !state.canStart) return;
+    send({ type: 'start', length: state.targetLength || 1000 });
+    dom.startBtn.disabled = true;
+    dom.startBtn.textContent = 'Memulai...';
+    haptic([25, 45, 70]);
+  });
+
+  dom.roomForm.addEventListener('submit', (event) => {
+    event.preventDefault();
+    connect(dom.roomInput.value);
+  });
+  dom.roomInput.addEventListener('input', () => {
+    dom.roomInput.value = normalizeRoom(dom.roomInput.value);
+  });
+  dom.roomInput.addEventListener('keydown', (event) => {
+    if (event.key === 'Enter') {
+      event.preventDefault();
+      connect(dom.roomInput.value);
+    }
+  });
+
+  /* ----------------------------------------------------------- Game screens */
+  function myRole() {
+    return state.roles[state.me.slot] || state.role || null;
+  }
+
+  function showGameFromPhase(keepOverlay = false) {
+    const role = myRole();
+    if (!role) {
+      showScreen('join');
+      showDisconnected('Peran belum ditentukan oleh Host.');
+      return;
+    }
+    state.role = role;
+    if (role === 'driver') showScreen('driver');
+    else showScreen('navigator');
+    dom.disconnectOverlay.hidden = true;
+    if (!keepOverlay) {
+      dom.endOverlay.hidden = true;
+      if (state.phase === 'gameover' || state.phase === 'win') showEndOverlay(state.phase === 'win' ? 'win' : 'lose', state.result);
+    }
+    if (state.phase === 'countdown') showCountdownOverlay();
+    updateInputAvailability();
+    ensureNavLoop();
+  }
+
+  dom.partnerCard.addEventListener('click', () => {
+    if (state.me.isHost) {
+      // no-op; useful tap target to dismiss keyboard
+      document.activeElement && document.activeElement.blur && document.activeElement.blur();
+    }
+  });
+
+  /* -------------------------------------------------------------- Countdown */
+  function setCountdownVisible(visible) {
+    dom.countdownOverlay.classList.toggle('visible', visible);
+    document.body.classList.toggle('counting', visible);
+  }
+
+  function showCountdownOverlay() {
+    setCountdownVisible(true);
+    dom.countLabel.textContent = 'Bersiap';
+    dom.countSub.textContent = 'Mobil akan melaju otomatis.';
+  }
+
+  function updateCountdown(seconds) {
+    if (state.phase !== 'countdown') return;
+    const n = Math.max(0, Math.ceil(Number(seconds) || 0));
+    const shown = n > 0 ? String(n) : 'GO';
+    if (shown !== state.countShown) {
+      state.countShown = shown;
+      dom.countNum.textContent = shown;
+      dom.countNum.style.animation = 'none';
+      void dom.countNum.offsetWidth;
+      dom.countNum.style.animation = '';
+      dom.countLabel.textContent = n > 0 ? 'Bersiap' : 'Gas!';
+      if (n === 0) haptic([25, 40, 80]);
+    }
+    setCountdownVisible(true);
+  }
+
+  function triggerBoom() {
+    dom.boomOverlay.classList.remove('active');
+    void dom.boomOverlay.offsetWidth;
+    dom.boomOverlay.classList.add('active');
+    haptic([80, 60, 160]);
+  }
+
+  /* -------------------------------------------------------------- End / retry */
+  function showEndOverlay(outcome, result = {}) {
+    const won = outcome === 'win';
+    dom.endOverlay.hidden = false;
+    dom.endCard.classList.toggle('win', won);
+    dom.endKicker.textContent = won ? 'Finish line · 1000 m' : 'Crash detected';
+    dom.endTitle.innerHTML = won ? 'Sampai<br>Juga!' : 'Mobil<br>Meledak';
+    dom.endReason.textContent = won
+      ? 'Satu kilometer selesai. Tim selamat!'
+      : (result.reason || 'Kendaraan tidak bisa bergerak selama 5 detik.');
+    dom.endProgress.textContent = `${Math.round(result.progress ?? state.telemetry.progress ?? 0)} m`;
+    dom.endTime.textContent = formatTime(result.elapsed ?? state.telemetry.elapsed ?? 0);
+    const isHost = state.me.isHost;
+    dom.retryBtn.hidden = !isHost;
+    dom.retryBtn.disabled = false;
+    dom.retryBtn.textContent = '↻ Ulangi';
+    dom.endNote.textContent = isHost
+      ? 'Ketuk Ulangi untuk memulai run baru dari garis start.'
+      : 'Menunggu Player 1 menekan Ulangi di HP-nya.';
+    if (state.connected) setConnPill('connected', won ? 'FINISH' : 'GAME OVER');
+    setCountdownVisible(false);
+    releaseAllInputs();
+  }
+
+  dom.retryBtn.addEventListener('click', () => {
+    if (!state.me.isHost || !state.connected) return;
+    if (!(state.phase === 'gameover' || state.phase === 'win')) return;
+    send({ type: 'retry' });
+    dom.retryBtn.disabled = true;
+    dom.retryBtn.textContent = 'Menunggu...';
+    haptic(28);
+  });
+
+  /* -------------------------------------------------------------- Driver UI */
+  function updateDriver(data) {
+    const maxLen = state.targetLength || (state.route ? state.route.length : 1000);
+    const speed = clamp(Math.round(Number(data.speedKmh) || 0), 0, 999);
+    dom.driverSpeed.textContent = String(speed);
+    dom.driverSpeedFill.style.width = `${clamp(speed / 200, 0, 1) * 100}%`;
+    dom.driverProgress.textContent = String(Math.round(Number(data.progress) || 0));
+    dom.driverProgressFill.style.width = `${clamp((Number(data.progress) || 0) / maxLen, 0, 1) * 100}%`;
+    dom.driverTimer.textContent = formatTime(data.elapsed || 0);
+    if (Number(data.failureTimer) > 1.5) {
+      dom.driverNote.classList.add('warn');
+      dom.driverNote.innerHTML = `<strong>${Number(data.failureTimer) > 4 ? 'MOBIL TERBAKAR' : 'MOBIL BERHENTI'}</strong>${Math.max(0, 5 - Number(data.failureTimer)).toFixed(1)} detik sebelum meledak. Lepas rem dan bergerak!`;
+    } else {
+      dom.driverNote.classList.remove('warn');
+      dom.driverNote.innerHTML = '<strong>Fokus ke jalan</strong>Mobil melaju otomatis. Kamu hanya mengatur arah dan rem.';
+    }
+  }
+
+  /* ------------------------------------------------------------ Navigator UI */
+  function updateNavigator(data) {
+    const maxLen = state.targetLength || (state.route ? state.route.length : 1000);
+    const speed = clamp(Math.round(Number(data.speedKmh) || 0), 0, 999);
+    const progress = Number(data.progress) || 0;
+    dom.navSpeed.textContent = `${speed} km/j`;
+    dom.navProgress.textContent = String(Math.round(progress));
+    dom.navProgressFill.style.width = `${clamp(progress / maxLen, 0, 1) * 100}%`;
+    dom.navDistanceLabel.textContent = `${Math.round(progress)} / ${maxLen} m`;
+    dom.navDistanceFill.style.width = `${clamp(progress / maxLen, 0, 1) * 100}%`;
+    dom.navTimer.textContent = formatTime(data.elapsed || 0);
+
+    const turn = data.nextTurn;
+    if (!turn) {
+      dom.turnCard.classList.remove('urgent');
+      dom.turnIcon.textContent = '↑';
+      dom.turnCaption.textContent = 'Rute';
+      dom.turnName.textContent = 'Lurus / finish';
+      dom.turnDistance.textContent = '—';
+      dom.turnAngle.textContent = '—';
+      dom.turnUnit.textContent = '';
+    } else {
+      const distance = Math.max(0, Math.round(turn.distance));
+      const urgent = distance < 55 || turn.active;
+      dom.turnCard.classList.toggle('urgent', urgent);
+      dom.turnIcon.textContent = turn.dir === 'right' ? '↱' : '↰';
+      dom.turnCaption.textContent = turn.active ? 'Tikungan sekarang' : 'Tikungan berikutnya';
+      dom.turnName.textContent = `${turn.dir === 'right' ? 'Kanan' : 'Kiri'} ${turn.angle}°`;
+      dom.turnDistance.textContent = turn.active || distance < 5 ? 'SEKARANG' : String(distance);
+      dom.turnUnit.textContent = turn.active || distance < 5 ? '' : 'm';
+      dom.turnAngle.textContent = `BELOK ${turn.angle}°`;
+    }
+    state.navDirty = true;
+  }
+
+  function applyTelemetry(data) {
+    state.telemetry = data;
+    if (data.phase && !['gameover', 'win', 'lobby'].includes(state.phase)) {
+      if (data.phase === 'playing' && state.phase === 'countdown') {
+        handlePhaseChange('playing');
+      }
+      if (data.phase === 'countdown') {
+        showCountdownOverlay();
+        updateCountdown(data.countdown || 0);
+      }
+    }
+    if (state.phase === 'countdown' && typeof data.countdown === 'number') {
+      updateCountdown(data.countdown);
+    }
+    if (state.phase === 'playing') {
+      if (state.me.isHost && state.lastPhase === 'countdown') haptic([35, 50, 80]);
+      setCountdownVisible(false);
+    }
+    if (myRole() === 'driver') updateDriver(data);
+    else if (myRole() === 'navigator') updateNavigator(data);
+    state.navDirty = true;
+  }
+
+  /* ------------------------------------------------------------------- Map */
+  function receiveTrack(msg) {
+    if (!msg.points || msg.points.length < 2) return;
+    const points = msg.points.map((p) => ({ x: p[0], z: p[1] }));
+    const length = msg.length || 1000;
+    state.targetLength = length;
+    updateMaxDistanceLabels(length);
+    state.route = {
+      points,
+      length,
+      bounds: msg.bounds || computeBounds(points),
+      turns: msg.turns || []
+    };
+    state.mapEmpty = false;
+    dom.mapEmpty.hidden = true;
+    state.navDirty = true;
+    ensureNavLoop();
+    if (myRole() === 'navigator') drawMapNow(performance.now());
+  }
+
+  function computeBounds(points) {
+    let minX = Infinity, maxX = -Infinity, minZ = Infinity, maxZ = -Infinity;
+    for (const p of points) {
+      minX = Math.min(minX, p.x);
+      maxX = Math.max(maxX, p.x);
+      minZ = Math.min(minZ, p.z);
+      maxZ = Math.max(maxZ, p.z);
+    }
+    return { minX, maxX, minZ, maxZ };
+  }
+
+  function ensureNavLoop() {
+    if (state.navRaf) return;
+    state.navRaf = requestAnimationFrame(navFrame);
+  }
+
+  function navFrame(now) {
+    state.navRaf = requestAnimationFrame(navFrame);
+    if (myRole() !== 'navigator' || state.phase === 'lobby') return;
+    if (now - state.navLastDraw < 66) return;
+    state.navLastDraw = now;
+    drawMapNow(now);
+  }
+
+  function resizeNavCanvas() {
+    const canvas = dom.navCanvas;
+    const rect = canvas.getBoundingClientRect();
+    if (rect.width < 2 || rect.height < 2) return { width: 0, height: 0, dpr: 1 };
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    const w = Math.max(1, Math.round(rect.width));
+    const h = Math.max(1, Math.round(rect.height));
+    if (canvas.width !== Math.round(w * dpr) || canvas.height !== Math.round(h * dpr)) {
+      canvas.width = Math.round(w * dpr);
+      canvas.height = Math.round(h * dpr);
+    }
+    return { width: w, height: h, dpr };
+  }
+
+  function drawMapNow(now) {
+    if (!state.route) return;
+    const ctx = dom.navCanvas.getContext('2d');
+    if (!ctx) return;
+    const size = resizeNavCanvas();
+    if (!size.width) return;
+    drawNavigationMap(ctx, size.width, size.height, state.route, {
+      progress: Number(state.telemetry.progress) || 0,
+      x: Number(state.telemetry.x) || 0,
+      z: Number(state.telemetry.z) || 0,
+      heading: Number(state.telemetry.heading) || 0,
+      time: now / 1000
+    }, size.dpr);
+  }
+
+  // Google Maps style rotating GPS navigation view: fixed car arrow at center, map rotates and scrolls around it.
+  function drawNavigationMap(ctx, width, height, route, car, dpr) {
+    ctx.save();
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.clearRect(0, 0, width, height);
+
+    const bg = ctx.createLinearGradient(0, 0, width, height);
+    bg.addColorStop(0, '#071b2e');
+    bg.addColorStop(0.6, '#041321');
+    bg.addColorStop(1, '#020b16');
+    ctx.fillStyle = bg;
+    ctx.fillRect(0, 0, width, height);
+
+    const points = route.points;
+    if (!points || points.length < 2) {
+      ctx.restore();
+      return;
+    }
+
+    const cx = width / 2;
+    const cy = height * 0.62;
+    const carX = car.x || points[0].x;
+    const carZ = car.z || points[0].z;
+    const heading = car.heading || 0;
+
+    ctx.save();
+    ctx.translate(cx, cy);
+    ctx.rotate(-heading);
+    ctx.translate(-carX, -carZ);
+
+    // Grid pattern
+    ctx.strokeStyle = 'rgba(110,191,222,.08)';
+    ctx.lineWidth = 1.5;
+    const step = 40;
+    const minX = carX - 220, maxX = carX + 220;
+    const minZ = carZ - 220, maxZ = carZ + 220;
+    for (let gx = Math.floor(minX / step) * step; gx <= maxX; gx += step) {
+      ctx.beginPath(); ctx.moveTo(gx, minZ); ctx.lineTo(gx, maxZ); ctx.stroke();
+    }
+    for (let gz = Math.floor(minZ / step) * step; gz <= maxZ; gz += step) {
+      ctx.beginPath(); ctx.moveTo(minX, gz); ctx.lineTo(maxX, gz); ctx.stroke();
+    }
+
+    // Full route line underlay
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.beginPath();
+    ctx.moveTo(points[0].x, points[0].z);
+    for (let i = 1; i < points.length; i++) {
+      ctx.lineTo(points[i].x, points[i].z);
+    }
+    ctx.strokeStyle = 'rgba(105,207,240,.15)';
+    ctx.lineWidth = 14;
+    ctx.stroke();
+    ctx.strokeStyle = 'rgba(239,252,255,.28)';
+    ctx.lineWidth = 3.2;
+    ctx.stroke();
+
+    // Active route ahead
+    const length = route.length || 1000;
+    const progress = clamp(car.progress || 0, 0, length);
+    const carIndex = clamp(Math.round((progress / length) * (points.length - 1)), 0, points.length - 1);
+
+    ctx.beginPath();
+    ctx.moveTo(points[carIndex].x, points[carIndex].z);
+    for (let i = carIndex + 1; i < points.length; i++) {
+      ctx.lineTo(points[i].x, points[i].z);
+    }
+    ctx.strokeStyle = '#f7fdff';
+    ctx.lineWidth = 4.2;
+    ctx.shadowColor = 'rgba(177,239,255,.6)';
+    ctx.shadowBlur = 10;
+    ctx.stroke();
+    ctx.shadowBlur = 0;
+
+    // Start / finish markers
+    const start = points[0];
+    ctx.beginPath();
+    ctx.arc(start.x, start.z, 4.5, 0, Math.PI * 2);
+    ctx.fillStyle = '#5ff0bb';
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(4,21,32,.9)';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+
+    const finish = points[points.length - 1];
+    const cs = 5;
+    for (let ix = 0; ix < 2; ix++) {
+      for (let iy = 0; iy < 2; iy++) {
+        ctx.fillStyle = (ix + iy) % 2 === 0 ? '#f7fdff' : '#0b1b28';
+        ctx.fillRect(finish.x - cs + ix * cs, finish.z - cs + iy * cs, cs, cs);
+      }
+    }
+    ctx.strokeStyle = 'rgba(247,253,255,.8)';
+    ctx.lineWidth = 1.2;
+    ctx.strokeRect(finish.x - cs, finish.z - cs, cs * 2, cs * 2);
+
+    // Upcoming turn marker
+    let marker = null;
+    if (route.turns && route.turns.length) {
+      for (const t of route.turns) {
+        if (t.d1 + 2 >= progress) { marker = t; break; }
+      }
+    }
+    if (marker) {
+      const ti = clamp(Math.round((Math.max(progress, Math.min(marker.d0, length)) / length) * (points.length - 1)), 0, points.length - 1);
+      const tp = points[ti];
+      const pulse = 0.5 + 0.5 * Math.sin((car.time || 0) * 4.2);
+      ctx.beginPath();
+      ctx.arc(tp.x, tp.z, 8 + pulse * 3, 0, Math.PI * 2);
+      ctx.strokeStyle = `rgba(255,209,102,${0.3 + pulse * 0.4})`;
+      ctx.lineWidth = 1.8;
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.arc(tp.x, tp.z, 3.5, 0, Math.PI * 2);
+      ctx.fillStyle = '#ffd166';
+      ctx.fill();
+    }
+
+    ctx.restore(); // restore world transform
+
+    // Fixed car arrow at center (cx, cy) pointing UP
+    ctx.save();
+    ctx.translate(cx, cy);
+    ctx.beginPath();
+    ctx.arc(0, 0, 15, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(255,209,102,.15)';
+    ctx.fill();
+    ctx.beginPath();
+    ctx.moveTo(0, -13);
+    ctx.lineTo(8, 9);
+    ctx.lineTo(0, 3.5);
+    ctx.lineTo(-8, 9);
+    ctx.closePath();
+    ctx.fillStyle = '#ffd166';
+    ctx.shadowColor = 'rgba(255,209,102,.8)';
+    ctx.shadowBlur = 10;
+    ctx.fill();
+    ctx.shadowBlur = 0;
+    ctx.strokeStyle = '#fff';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+    ctx.restore();
+
+    ctx.restore();
+  }
+
+  /* ------------------------------------------------------------- Input sends */
+  function send(payload) {
+    if (!state.conn || !state.connected) return;
+    try {
+      state.conn.send(payload);
+    } catch (error) {
+      console.warn('[FGDN controller] send failed', error);
+    }
+  }
+
+  function computeInputSteer() {
+    const left = ((state.pointerControls.get('left') || new Set()).size) > 0;
+    const right = ((state.pointerControls.get('right') || new Set()).size) > 0;
+    return (right ? 1 : 0) - (left ? 1 : 0);
+  }
+
+  function isBrakePressed() {
+    const set = state.pointerControls.get('brake');
+    return Boolean(set && set.size > 0);
+  }
+
+  function sendInput(force = false) {
+    if (!state.connected || myRole() !== 'driver') return;
+    const input = { steer: computeInputSteer(), brake: isBrakePressed() };
+    state.inputState = input;
+    const key = `${input.steer}|${input.brake}`;
+    if (!force && key === state.lastSentInput) return;
+    state.lastSentInput = key;
+    send({ type: 'input', steer: input.steer, brake: input.brake });
+  }
+
+  function updateControlVisual(name, pressed) {
+    const button = document.querySelector(`[data-control="${name}"]`);
+    if (button) button.classList.toggle('pressed', pressed);
+  }
+
+  function pressControl(name, pointerId) {
+    if (!state.pointerControls.has(name)) state.pointerControls.set(name, new Set());
+    state.pointerControls.get(name).add(pointerId);
+    updateControlVisual(name, true);
+    if (name !== 'brake') haptic(11);
+    sendInput(true);
+  }
+
+  function releaseControl(name, pointerId) {
+    const set = state.pointerControls.get(name);
+    if (!set) return;
+    set.delete(pointerId);
+    if (set.size === 0) {
+      state.pointerControls.delete(name);
+      updateControlVisual(name, false);
+    }
+    sendInput(true);
+  }
+
+  function releaseAllInputs() {
+    for (const [name, set] of state.pointerControls.entries()) {
+      set.clear();
+      updateControlVisual(name, false);
+    }
+    state.pointerControls.clear();
+    state.lastSentInput = '';
+    sendInput(true);
+  }
+
+  function setupControls() {
+    dom.controls.forEach((button) => {
+      const name = button.dataset.control;
+      const pointers = new Set();
+      const down = (event) => {
+        event.preventDefault();
+        if (myRole() !== 'driver') return;
+        if (!state.connected) return;
+        if (state.phase !== 'playing' && state.phase !== 'countdown') return;
+        const id = event.pointerId;
+        if (pointers.has(id)) return;
+        pointers.add(id);
+        try { button.setPointerCapture(id); } catch {/* ignore */}
+        if (!state.pointerControls.has(name)) state.pointerControls.set(name, new Set());
+        state.pointerControls.get(name).add(id);
+        button.classList.add('pressed');
+        if (name !== 'brake') haptic(10);
+        sendInput(true);
+        acquireWakeLock();
+      };
+      const up = (event) => {
+        const id = event.pointerId;
+        if (!pointers.has(id)) return;
+        pointers.delete(id);
+        const set = state.pointerControls.get(name);
+        if (set) {
+          set.delete(id);
+          if (set.size === 0) {
+            state.pointerControls.delete(name);
+            button.classList.remove('pressed');
+          }
+        }
+        sendInput(true);
+      };
+      button.addEventListener('pointerdown', down, { passive: false });
+      button.addEventListener('pointerup', up);
+      button.addEventListener('pointercancel', up);
+      button.addEventListener('lostpointercapture', up);
+      button.addEventListener('contextmenu', (e) => e.preventDefault());
+    });
+
+    window.addEventListener('blur', releaseAllInputs);
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden) releaseAllInputs();
+      else if (state.connected) acquireWakeLock();
+    });
+    window.addEventListener('pagehide', releaseAllInputs);
+    window.addEventListener('resize', () => {
+      state.navDirty = true;
+      if (myRole() === 'navigator') drawMapNow(performance.now());
+    });
+  }
+
+  // Heartbeat is essential: if the page loses the pointerup event, the desktop
+  // must not keep the wheel pinned. Host also expires stale input after 550 ms.
+  setInterval(() => {
+    if (!state.connected) return;
+    if (state.phase !== 'playing' && state.phase !== 'countdown') return;
+    if (myRole() !== 'driver') return;
+    sendInput(true);
+  }, 100);
+
+  function updateInputAvailability() {
+    const allowed = myRole() === 'driver' && state.connected &&
+      (state.phase === 'playing' || state.phase === 'countdown');
+    dom.controls.forEach((button) => {
+      button.disabled = !allowed;
+      button.style.opacity = allowed ? '' : '0.55';
+    });
+    if (!allowed) {
+      for (const name of ['left', 'right', 'brake']) {
+        const set = state.pointerControls.get(name);
+        if (set && set.size) {
+          set.clear();
+          updateControlVisual(name, false);
+        }
+      }
+    }
+  }
+
+  /* ---------------------------------------------------------- Disconnect UI */
+  dom.reconnectBtn.addEventListener('click', () => {
+    dom.disconnectOverlay.hidden = true;
+    if (!state.room) {
+      showScreen('join');
+      return;
+    }
+    connect(state.room);
+  });
+  dom.disconnectClose.addEventListener('click', () => {
+    dom.disconnectOverlay.hidden = true;
+    cleanupConnection(true);
+    state.connected = false;
+    state.connecting = false;
+    setJoinLoading(false);
+    setJoinError('');
+    setConnPill('', 'OFFLINE');
+    showScreen('join');
+  });
+
+  /* ------------------------------------------------------------------- Boot */
+  function boot() {
+    setupControls();
+    setConnPill('', 'OFFLINE');
+    const room = getQueryRoom();
+    if (room && ROOM_PATTERN.test(room)) {
+      dom.roomInput.value = room;
+      connect(room);
+    } else {
+      dom.roomInput.value = '';
+      setJoinLoading(false);
+      showScreen('join');
+      setConnPill('', 'OFFLINE');
+      setTimeout(() => {
+        try { dom.roomInput.focus({ preventScroll: true }); } catch {/* ignore */}
+      }, 400);
+    }
+    window.addEventListener('online', () => {
+      if (!state.connected && state.room) toast('Jaringan kembali. Coba sambung ulang.');
+    });
+    window.addEventListener('offline', () => {
+      if (state.connected) toast('Jaringan terputus.');
+    });
+    window.__FGDN_CONTROLLER__ = {
+      state,
+      connect,
+      releaseAllInputs
+    };
+  }
+
+  boot();
+})();
+</script>
+</body>
+</html>

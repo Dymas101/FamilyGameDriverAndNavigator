@@ -1,0 +1,4647 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+<meta name="theme-color" content="#050d18" />
+<meta name="mobile-web-app-capable" content="yes" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='10' fill='%2306101c'/%3E%3Cpath d='M32 10 54 32 32 54 10 32Z' fill='none' stroke='%2373e6ff' stroke-width='3'/%3E%3Cpath d='M32 23 41 32 32 41 23 32Z' fill='%23ffd166'/%3E%3C/svg%3E" />
+<title>Family Game — Driver &amp; Navigator</title>
+<style>
+  :root{
+    --bg:#030b14;
+    --deep:#050f1c;
+    --panel:rgba(7,20,34,.9);
+    --panel-solid:#071524;
+    --line:rgba(118,216,255,.18);
+    --line-strong:rgba(118,216,255,.38);
+    --cyan:#73e6ff;
+    --cyan-dim:#2e92a8;
+    --yellow:#ffd166;
+    --yellow-strong:#ffbe3d;
+    --coral:#ff5d70;
+    --white:#f4fbff;
+    --muted:#8da7b8;
+    --font:"Bahnschrift","DIN Alternate","Segoe UI",system-ui,-apple-system,sans-serif;
+    --font-narrow:"Bahnschrift SemiCondensed","Arial Narrow","Segoe UI",sans-serif;
+    --ease:cubic-bezier(.22,.9,.24,1);
+  }
+  *{box-sizing:border-box}
+  html,body{width:100%;height:100%;margin:0}
+  html{background:var(--bg)}
+  body{
+    color:var(--white);
+    background:var(--bg);
+    font-family:var(--font);
+    overflow:hidden;
+    overscroll-behavior:none;
+    -webkit-font-smoothing:antialiased;
+    user-select:none;
+  }
+  button,a,input,summary{font-family:inherit}
+  button{color:inherit}
+  button:focus-visible,a:focus-visible,input:focus-visible,summary:focus-visible{outline:2px solid var(--cyan);outline-offset:3px}
+  [hidden]{display:none !important}
+  #scene{position:fixed;inset:0;width:100%;height:100%;display:block;background:#040b14}
+  .vignette{
+    position:fixed;inset:0;pointer-events:none;z-index:2;
+    background:
+      radial-gradient(ellipse at 50% 46%, transparent 44%, rgba(0,5,11,.38) 77%, rgba(0,3,8,.82) 100%),
+      linear-gradient(180deg,rgba(1,6,12,.26),transparent 22%,transparent 76%,rgba(1,6,12,.5));
+  }
+  .noise{
+    position:fixed;inset:0;z-index:2;pointer-events:none;opacity:.055;mix-blend-mode:screen;
+    background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 180 180' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.7'/%3E%3C/svg%3E");
+  }
+
+  /* ---------------------------------------------------------------- Screens */
+  .screen{
+    position:fixed;inset:0;z-index:10;
+    display:flex;align-items:center;justify-content:center;
+    padding:clamp(14px,2.6vh,30px) clamp(16px,3.2vw,46px);
+    overflow:auto;
+  }
+  #menu{
+    background:
+      radial-gradient(ellipse at 23% 44%,rgba(2,9,16,.18) 0%,rgba(2,8,15,.76) 55%,rgba(1,5,10,.93) 100%),
+      linear-gradient(100deg,rgba(1,5,10,.83) 0%,rgba(2,8,15,.37) 50%,rgba(1,5,10,.73) 100%);
+    backdrop-filter:blur(2.5px);
+    animation:screenIn .5s var(--ease) both;
+  }
+  #menu::before{
+    content:"";position:fixed;inset:0;pointer-events:none;
+    background:linear-gradient(90deg,rgba(2,9,16,.55),transparent 45%,rgba(2,9,16,.35));
+  }
+  @keyframes screenIn{from{opacity:0}to{opacity:1}}
+  .menu-shell{
+    position:relative;z-index:1;
+    width:min(1180px,100%);
+    display:grid;grid-template-columns:minmax(0,1.18fr) minmax(330px,.82fr);
+    gap:clamp(24px,4vw,64px);align-items:center;
+    margin:auto 0;
+  }
+  .eyebrow{
+    display:flex;align-items:center;gap:10px;
+    color:var(--cyan);font-size:clamp(9px,1vw,11px);font-weight:700;
+    letter-spacing:.22em;text-transform:uppercase;margin:0 0 clamp(12px,2vh,20px);
+  }
+  .eyebrow::before{content:"";width:28px;height:1px;background:var(--cyan);box-shadow:0 0 10px var(--cyan)}
+  h1.game-title{
+    margin:0;font-family:var(--font-narrow);font-weight:800;line-height:.84;
+    letter-spacing:-.045em;text-transform:uppercase;font-size:clamp(46px,7.3vw,106px);
+    text-shadow:0 10px 50px rgba(0,0,0,.48);
+  }
+  h1.game-title .family{
+    display:block;color:#d7efff;font-size:.51em;letter-spacing:.03em;line-height:1.2;
+    margin-bottom:.22em;font-weight:600;
+  }
+  h1.game-title .driver{color:var(--yellow)}
+  h1.game-title .amp{color:var(--cyan);font-style:italic;font-weight:400;padding:0 .07em}
+  h1.game-title .nav{color:#fff}
+  .tagline{
+    margin:clamp(15px,2.4vh,24px) 0 0;max-width:56ch;
+    color:#b5cddb;font-size:clamp(13px,1.35vw,16px);line-height:1.56;
+  }
+  .tagline strong{color:var(--white);font-weight:600}
+  .hero-meta{display:flex;flex-wrap:wrap;gap:7px;margin-top:clamp(13px,2vh,20px)}
+  .meta-pill{
+    padding:6px 10px;border:1px solid rgba(140,211,238,.16);border-radius:4px;
+    background:rgba(5,18,31,.52);color:#a5c1d2;font-size:10px;letter-spacing:.12em;font-weight:600;
+  }
+  .meta-pill b{color:var(--cyan);font-weight:700}
+  .solo-block{
+    margin-top:clamp(20px,3.2vh,34px);
+    padding-top:clamp(16px,2.6vh,24px);
+    border-top:1px solid rgba(140,211,238,.14);
+    display:flex;align-items:center;gap:18px;flex-wrap:wrap;
+  }
+  .btn{
+    border:0;border-radius:5px;cursor:pointer;
+    padding:14px 20px;min-height:44px;
+    font-weight:700;font-size:13px;letter-spacing:.09em;text-transform:uppercase;
+    transition:transform .16s var(--ease),background .16s,color .16s,border-color .16s,box-shadow .16s;
+    -webkit-tap-highlight-color:transparent;
+  }
+  .btn:hover:not(:disabled){transform:translateY(-1px)}
+  .btn:active:not(:disabled){transform:translateY(1px) scale(.99)}
+  .btn:disabled{cursor:not-allowed;opacity:.4}
+  .btn-primary{
+    color:#17130a;background:linear-gradient(135deg,#ffe28e,var(--yellow-strong) 62%,#f4a823);
+    box-shadow:0 8px 28px rgba(255,177,47,.19),inset 0 1px rgba(255,255,255,.45);
+  }
+  .btn-primary:hover:not(:disabled){box-shadow:0 10px 34px rgba(255,177,47,.32),inset 0 1px rgba(255,255,255,.55)}
+  .solo-btn{
+    display:inline-flex;align-items:center;gap:12px;position:relative;
+    padding:15px 25px;font-size:14px;
+  }
+  .solo-btn .play-icon{font-size:10px;transform:translateY(-1px)}
+  .solo-copy{min-width:180px}
+  .solo-copy strong{display:block;color:#e9f8ff;font-size:12px;letter-spacing:.06em;font-weight:600}
+  .solo-copy span{display:block;margin-top:5px;color:#7392a5;font-size:11px;line-height:1.4}
+  kbd{
+    display:inline-flex;min-width:22px;height:21px;align-items:center;justify-content:center;
+    padding:0 5px;margin:0 2px;border:1px solid rgba(146,211,236,.28);border-bottom-color:rgba(146,211,236,.45);
+    border-radius:3px;background:rgba(7,21,35,.85);color:#d7eef9;
+    font-family:var(--font-narrow);font-size:10px;font-weight:700;line-height:1;
+  }
+
+  /* -------------------------------------------------------------- Co-op card */
+  .connect-card{
+    border:1px solid rgba(118,204,236,.21);border-radius:8px;
+    background:
+      linear-gradient(155deg,rgba(12,31,51,.84),rgba(4,14,25,.94) 66%),
+      var(--panel);
+    box-shadow:0 30px 90px rgba(0,0,0,.35),inset 0 1px rgba(255,255,255,.035);
+    padding:clamp(16px,2.4vw,24px);
+    position:relative;overflow:hidden;
+  }
+  .connect-card::before{
+    content:"";position:absolute;inset:0 0 auto;height:1px;
+    background:linear-gradient(90deg,transparent,rgba(115,230,255,.65),transparent);
+  }
+  .card-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:15px}
+  .card-title{display:flex;align-items:center;gap:9px;font-size:10px;font-weight:700;letter-spacing:.17em;color:#bdd9e7;text-transform:uppercase}
+  .card-title .live-dot{width:6px;height:6px;border-radius:50%;background:var(--coral);box-shadow:0 0 0 4px rgba(255,93,112,.08),0 0 14px rgba(255,93,112,.4)}
+  .status-pill{
+    display:inline-flex;align-items:center;gap:6px;
+    border:1px solid rgba(117,211,243,.19);border-radius:99px;
+    padding:4px 9px;background:rgba(8,28,44,.7);
+    color:#9eb9c9;font-family:var(--font-narrow);font-size:9px;font-weight:700;
+    letter-spacing:.12em;text-transform:uppercase;white-space:nowrap;
+  }
+  .status-pill i{display:block;width:5px;height:5px;border-radius:50%;background:#7f95a3}
+  .status-pill.ready i{background:#6cf2ba;box-shadow:0 0 8px rgba(108,242,186,.8)}
+  .status-pill.warn i{background:var(--yellow);box-shadow:0 0 8px rgba(255,209,102,.6)}
+  .status-pill.error i{background:var(--coral);box-shadow:0 0 8px rgba(255,93,112,.6)}
+  .qr-row{display:flex;align-items:center;gap:17px}
+  .qr-box{
+    flex:0 0 clamp(144px,13vw,158px);width:clamp(144px,13vw,158px);aspect-ratio:1;
+    padding:9px;border-radius:5px;background:#f6fbff;
+    display:grid;place-items:center;overflow:hidden;
+    box-shadow:0 12px 28px rgba(0,0,0,.24);
+  }
+  #qrcode{width:100%;height:100%;display:grid;place-items:center}
+  #qrcode canvas,#qrcode img{display:block;width:100% !important;height:100% !important;image-rendering:pixelated}
+  #qrcode .qr-fallback{font-size:10px;color:#20394a;text-align:center;padding:8px;line-height:1.4}
+  .room-info{min-width:0;flex:1}
+  .mini-label{display:block;color:#6e8fa3;font-size:9px;letter-spacing:.19em;text-transform:uppercase;font-weight:700;margin-bottom:5px}
+  .room-code{
+    margin:0;color:var(--white);font-family:var(--font-narrow);font-weight:800;
+    font-size:clamp(29px,3vw,38px);letter-spacing:.11em;line-height:1;
+    text-shadow:0 0 22px rgba(115,230,255,.17);
+  }
+  .room-hint{margin:9px 0 0;color:#8eabbb;font-size:10.5px;line-height:1.45}
+  .controller-link-row{display:flex;align-items:center;gap:8px;margin-top:14px;min-width:0}
+  .controller-link{
+    display:block;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+    color:#88a9bb;font-size:10px;text-decoration:none;border-bottom:1px dotted rgba(136,169,187,.36);
+    padding:3px 0;transition:color .15s;
+  }
+  .controller-link:hover{color:var(--cyan)}
+  .icon-btn{
+    flex:0 0 auto;border:1px solid rgba(118,204,236,.19);border-radius:4px;
+    background:rgba(6,23,38,.7);color:#9ab6c5;cursor:pointer;
+    font-size:9px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;
+    height:28px;padding:0 9px;transition:border-color .15s,color .15s;
+  }
+  .icon-btn:hover{color:var(--cyan);border-color:rgba(115,230,255,.45)}
+  .players{display:grid;gap:6px;margin-top:16px}
+  .player-row{
+    display:grid;grid-template-columns:26px minmax(0,1fr) auto;align-items:center;gap:9px;
+    border:1px solid rgba(120,191,221,.11);border-radius:4px;
+    background:rgba(4,15,27,.6);padding:8px 9px;min-height:42px;
+  }
+  .player-slot{
+    display:grid;place-items:center;width:24px;height:24px;border-radius:3px;
+    background:rgba(116,224,255,.08);border:1px solid rgba(116,224,255,.17);
+    color:var(--cyan);font-family:var(--font-narrow);font-size:10px;font-weight:800;
+  }
+  .player-name{color:#d3e8f2;font-size:11px;font-weight:600;line-height:1.2;display:flex;align-items:center;gap:6px;min-width:0}
+  .host-tag{
+    font-size:7.5px;font-weight:800;letter-spacing:.09em;color:#1b170b;
+    background:var(--yellow);border-radius:2px;padding:2px 4px;line-height:1;
+  }
+  .player-state{color:#708c9d;font-size:9px;line-height:1.3;margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .role-chip{
+    justify-self:end;padding:4px 7px;border-radius:3px;border:1px solid rgba(117,211,243,.14);
+    color:#69889a;font-size:8px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;white-space:nowrap;
+  }
+  .role-chip.driver{color:#ffdd93;border-color:rgba(255,209,102,.25);background:rgba(255,209,102,.06)}
+  .role-chip.navigator{color:#8beaff;border-color:rgba(115,230,255,.24);background:rgba(115,230,255,.06)}
+  .player-row.online .player-state{color:#99b9c8}
+  .player-row.online .player-slot{background:rgba(111,234,185,.09);border-color:rgba(111,234,185,.25);color:#88f2c5}
+  .net-hint{
+    min-height:30px;margin:12px 0 0;padding:0;color:#82a0b2;font-size:10.5px;line-height:1.5;
+    display:flex;align-items:flex-start;gap:7px;
+  }
+  .net-hint::before{content:"›";color:var(--cyan);font-weight:700;line-height:1.4}
+  .url-setting{margin-top:10px;border-top:1px solid rgba(120,191,221,.09);padding-top:9px}
+  .url-setting summary{
+    cursor:pointer;color:#5f7e90;font-size:9px;font-weight:700;letter-spacing:.11em;text-transform:uppercase;
+    list-style:none;display:flex;align-items:center;gap:6px;
+  }
+  .url-setting summary::-webkit-details-marker{display:none}
+  .url-setting summary::before{content:"+";color:var(--cyan);font-size:12px;line-height:1}
+  .url-setting[open] summary::before{content:"−"}
+  .url-editor{display:flex;gap:6px;margin-top:9px}
+  .url-editor input{
+    width:100%;min-width:0;height:32px;border:1px solid rgba(118,204,236,.2);border-radius:4px;
+    background:rgba(2,10,18,.8);color:#d9edf6;padding:0 9px;font-size:10px;outline:none;
+  }
+  .url-editor input::placeholder{color:#557385}
+  .url-editor input:focus{border-color:rgba(115,230,255,.55)}
+  .url-warning{color:#ffcb7b;font-size:9px;line-height:1.4;margin:7px 0 0;display:none}
+  .url-warning.show{display:block}
+  .menu-footer{
+    position:relative;z-index:1;width:min(1180px,100%);
+    display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap;
+    margin:clamp(14px,2.6vh,28px) 0 0;color:#5d7d8f;font-size:9px;letter-spacing:.1em;
+    text-transform:uppercase;
+  }
+  .menu-footer .keys{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+  .seed-text{color:#496777;font-variant-numeric:tabular-nums}
+
+  /* --------------------------------------------------------------------- HUD */
+  #hud{
+    position:fixed;inset:0;z-index:5;pointer-events:none;
+    opacity:0;transition:opacity .35s var(--ease);
+  }
+  #hud.visible{opacity:1}
+  .hud-top{
+    position:absolute;top:0;left:0;right:0;
+    display:flex;align-items:flex-start;justify-content:space-between;gap:18px;
+    padding:clamp(14px,2.5vw,28px);
+  }
+  .hud-brand{display:flex;flex-direction:column;gap:6px;min-width:130px}
+  .hud-brand .brand-line{font-family:var(--font-narrow);font-size:11px;font-weight:800;letter-spacing:.16em;color:#d8f2ff;text-shadow:0 2px 12px rgba(0,0,0,.55)}
+  .hud-brand .brand-line span{color:var(--yellow)}
+  .coop-chip{
+    display:inline-flex;align-items:center;gap:7px;align-self:flex-start;
+    padding:5px 8px;border-radius:3px;border:1px solid rgba(119,206,236,.16);
+    background:rgba(3,13,23,.55);backdrop-filter:blur(5px);
+    color:#8eabba;font-size:8px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;
+  }
+  .coop-chip b{color:#cde6f1;font-weight:700}
+  .coop-chip .d{width:4px;height:4px;border-radius:50%;background:#6cf2ba;box-shadow:0 0 7px rgba(108,242,186,.7)}
+  .progress-hud{
+    position:absolute;top:clamp(14px,2.5vw,26px);left:50%;transform:translateX(-50%);
+    width:min(310px,34vw);padding:8px 11px 9px;
+    border:1px solid rgba(126,207,235,.16);border-radius:4px;
+    background:rgba(3,13,23,.48);backdrop-filter:blur(7px);
+    box-shadow:0 10px 30px rgba(0,0,0,.18);
+  }
+  .progress-labels{display:flex;justify-content:space-between;align-items:baseline;gap:12px;margin-bottom:6px}
+  .progress-labels span{font-size:8px;font-weight:700;letter-spacing:.15em;color:#7f9daf;text-transform:uppercase}
+  .progress-labels b{font-family:var(--font-narrow);font-size:13px;letter-spacing:.03em;color:#f5fbff;font-variant-numeric:tabular-nums}
+  .progress-labels b em{font-style:normal;color:#648294;font-size:9px;font-weight:600}
+  .progress-track{height:3px;background:rgba(136,196,220,.16);border-radius:99px;overflow:hidden}
+  .progress-fill{height:100%;width:0%;background:linear-gradient(90deg,var(--cyan),#d7f7ff);box-shadow:0 0 12px rgba(115,230,255,.6);transition:width .15s linear}
+  .timer-hud{
+    text-align:right;color:#cfecf8;font-family:var(--font-narrow);
+    font-size:clamp(15px,2vw,20px);font-weight:700;letter-spacing:.06em;font-variant-numeric:tabular-nums;
+    text-shadow:0 2px 14px rgba(0,0,0,.65);min-width:112px;
+  }
+  .timer-hud small{display:block;color:#6c8b9c;font-family:var(--font);font-size:8px;letter-spacing:.16em;font-weight:700;margin-top:4px}
+  .speed-hud{
+    position:absolute;right:clamp(18px,3.5vw,46px);bottom:clamp(20px,4.5vh,44px);
+    display:flex;flex-direction:column;align-items:flex-end;gap:8px;
+    filter:drop-shadow(0 6px 24px rgba(0,0,0,.44));
+  }
+  .speed-line{display:flex;align-items:baseline;gap:7px}
+  .speed-value{
+    font-family:var(--font-narrow);font-size:clamp(48px,7.1vw,82px);font-weight:800;line-height:.78;
+    letter-spacing:-.035em;color:#f3fbff;font-variant-numeric:tabular-nums;
+    text-shadow:0 0 36px rgba(115,230,255,.14);
+  }
+  .speed-unit{color:#86a6b7;font-size:10px;font-weight:700;letter-spacing:.13em;text-transform:uppercase}
+  .speed-bar{width:clamp(150px,17vw,205px);height:3px;border-radius:99px;background:rgba(142,205,229,.15);overflow:hidden}
+  .speed-fill{width:0%;height:100%;background:linear-gradient(90deg,var(--cyan),var(--yellow) 75%,var(--coral));transition:width .12s linear;box-shadow:0 0 14px rgba(115,230,255,.26)}
+  .drive-hint{
+    position:absolute;left:clamp(18px,3.5vw,46px);bottom:clamp(20px,4.5vh,42px);
+    color:#7994a4;font-size:9px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;
+    display:flex;align-items:center;gap:6px;flex-wrap:wrap;
+  }
+  .drive-hint .divider{height:10px;width:1px;background:rgba(125,164,184,.26);margin:0 4px}
+  .warn-hud{
+    position:absolute;left:50%;bottom:clamp(78px,12vh,128px);transform:translate(-50%,8px);
+    padding:9px 14px;border:1px solid rgba(255,93,112,.32);border-radius:4px;
+    background:rgba(29,5,9,.72);backdrop-filter:blur(8px);
+    color:#ffc2c8;font-size:10px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;
+    opacity:0;transition:opacity .2s,transform .2s;white-space:nowrap;
+    box-shadow:0 0 34px rgba(255,63,86,.12);
+  }
+  .warn-hud.visible{opacity:1;transform:translate(-50%,0)}
+  .warn-hud strong{color:#ff8b98;font-variant-numeric:tabular-nums}
+  .edge-warn{
+    position:absolute;left:50%;bottom:clamp(120px,17vh,182px);transform:translateX(-50%);
+    color:#ffd166;font-size:9px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;
+    opacity:0;transition:opacity .18s;text-shadow:0 0 20px rgba(255,177,47,.35);
+  }
+  .edge-warn.visible{opacity:1}
+  #speed-fx{
+    position:fixed;inset:0;z-index:4;pointer-events:none;opacity:0;
+    background:radial-gradient(ellipse at 50% 50%,transparent 25%,rgba(2,9,16,.1) 65%,rgba(1,5,11,.52) 100%);
+    transition:opacity .35s;
+  }
+  #explosion-flash{
+    position:fixed;inset:0;z-index:20;pointer-events:none;opacity:0;
+    background:radial-gradient(circle at 50% 48%,rgba(255,243,191,.96),rgba(255,137,52,.66) 20%,rgba(130,21,13,.15) 60%,transparent 78%);
+    mix-blend-mode:screen;
+  }
+  #explosion-flash.fire{animation:flashBoom .62s ease-out both}
+  @keyframes flashBoom{0%{opacity:0}8%{opacity:1}35%{opacity:.65}100%{opacity:0}}
+
+  /* --------------------------------------------------------------- End cards */
+  .end-screen{
+    z-index:30;background:rgba(1,7,13,.7);backdrop-filter:blur(8px);
+    animation:screenIn .35s var(--ease) both;
+  }
+  .end-card{
+    width:min(510px,100%);padding:clamp(24px,4.4vw,42px);
+    border:1px solid rgba(136,211,240,.21);border-radius:8px;
+    background:
+      radial-gradient(ellipse at 50% 0%,rgba(36,79,105,.24),transparent 58%),
+      linear-gradient(160deg,rgba(9,25,42,.97),rgba(3,11,20,.98));
+    box-shadow:0 40px 120px rgba(0,0,0,.55),inset 0 1px rgba(255,255,255,.04);
+    text-align:center;position:relative;overflow:hidden;
+  }
+  .end-card::before{content:"";position:absolute;top:0;left:12%;right:12%;height:1px;background:linear-gradient(90deg,transparent,rgba(115,230,255,.7),transparent)}
+  .end-card.lose::before{background:linear-gradient(90deg,transparent,rgba(255,93,112,.8),transparent)}
+  .end-kicker{color:var(--coral);font-size:9px;font-weight:800;letter-spacing:.22em;text-transform:uppercase;margin:0 0 10px}
+  .end-card.win .end-kicker{color:#7ff0c1}
+  .end-title{margin:0;font-family:var(--font-narrow);font-size:clamp(38px,6vw,64px);font-weight:800;line-height:.89;letter-spacing:-.035em;text-transform:uppercase}
+  .end-card.win .end-title{color:var(--yellow)}
+  .end-reason{color:#a5c0cf;font-size:12px;line-height:1.55;margin:15px auto 0;max-width:35ch}
+  .end-stats{
+    display:flex;justify-content:center;gap:30px;margin:22px 0 24px;
+    padding:16px 0;border-top:1px solid rgba(125,188,215,.13);border-bottom:1px solid rgba(125,188,215,.13);
+  }
+  .end-stat{display:flex;flex-direction:column;gap:5px}
+  .end-stat span{color:#648294;font-size:8px;font-weight:700;letter-spacing:.15em;text-transform:uppercase}
+  .end-stat b{color:#eefaff;font-family:var(--font-narrow);font-size:21px;font-weight:700;letter-spacing:.03em;font-variant-numeric:tabular-nums}
+  .end-actions{display:flex;justify-content:center;gap:9px;flex-wrap:wrap}
+  .retry-btn{min-width:190px;padding:16px 24px}
+  .end-note{color:#638294;font-size:9px;line-height:1.5;margin:14px 0 0;letter-spacing:.03em}
+  .end-note b{color:#94b7ca;font-weight:600}
+  .small-key{color:#5e7d8f;font-size:9px;margin-top:8px}
+
+  /* --------------------------------------------------------------- Loading */
+  #loading{
+    position:fixed;inset:0;z-index:60;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;
+    background:radial-gradient(ellipse at 50% 45%,#0a1b2c 0%,#030a12 65%);
+    transition:opacity .45s var(--ease),visibility .45s;
+  }
+  #loading.done{opacity:0;visibility:hidden;pointer-events:none}
+  .loader-mark{width:44px;height:44px;position:relative;border:1px solid rgba(115,230,255,.35);transform:rotate(45deg);animation:loaderTurn 2.8s linear infinite}
+  .loader-mark::after{content:"";position:absolute;inset:7px;border:1px solid rgba(255,209,102,.6);animation:loaderPulse 1.3s ease-in-out infinite}
+  @keyframes loaderTurn{to{transform:rotate(405deg)}}
+  @keyframes loaderPulse{0%,100%{opacity:.25;transform:scale(.8)}50%{opacity:1;transform:scale(1)}}
+  .loader-title{font-family:var(--font-narrow);font-size:12px;font-weight:700;letter-spacing:.23em;text-transform:uppercase;color:#aad4e4}
+  .loader-status{color:#5e7f92;font-size:10px;letter-spacing:.08em;max-width:280px;text-align:center;line-height:1.5}
+  .load-error{color:#ffadb6}
+  #toast{
+    position:fixed;z-index:80;left:50%;bottom:clamp(22px,4vh,36px);transform:translate(-50%,12px);
+    border:1px solid rgba(123,207,235,.25);border-radius:4px;
+    background:rgba(4,17,29,.94);color:#d4eff9;font-size:11px;line-height:1.4;
+    padding:10px 14px;box-shadow:0 12px 40px rgba(0,0,0,.35);
+    opacity:0;pointer-events:none;transition:opacity .2s,transform .2s;max-width:min(430px,84vw);text-align:center;
+  }
+  #toast.show{opacity:1;transform:translate(-50%,0)}
+
+  .dist-group{display:flex;align-items:center;gap:6px;width:100%;margin-top:12px}
+  .dist-btn{
+    padding:6px 12px;border:1px solid rgba(115,230,255,.2);border-radius:4px;
+    background:rgba(4,16,28,.7);color:#8eabba;font-size:10.5px;font-weight:800;
+    cursor:pointer;transition:all .15s;-webkit-tap-highlight-color:transparent;
+  }
+  .dist-btn:hover,.dist-btn.active{color:var(--yellow);border-color:var(--yellow);background:rgba(255,209,102,.12);box-shadow:0 0 10px rgba(255,209,102,.15)}
+  .audio-btn{
+    border:1px solid rgba(115,230,255,.25);border-radius:4px;background:rgba(4,16,28,.75);
+    color:var(--cyan);cursor:pointer;padding:5px 9px;font-size:13px;line-height:1;
+    transition:all .15s;margin-left:10px;display:inline-flex;align-items:center;justify-content:center;
+  }
+  .audio-btn:hover{border-color:var(--cyan);background:rgba(115,230,255,.18)}
+
+  @media (max-width:900px){
+    .menu-shell{grid-template-columns:minmax(0,1fr);gap:22px;max-width:620px}
+    .hero{text-align:left}
+    h1.game-title{font-size:clamp(50px,11vw,88px)}
+    .solo-block{margin-top:18px;padding-top:16px}
+    .connect-card{max-width:none}
+    .menu-footer{margin-top:18px}
+    .progress-hud{width:min(270px,42vw)}
+  }
+  @media (max-width:600px){
+    #menu{align-items:flex-start}
+    .menu-shell{width:100%}
+    .eyebrow{margin-bottom:10px}
+    h1.game-title{font-size:clamp(46px,13.5vw,72px)}
+    .tagline{font-size:12px}
+    .hero-meta{gap:5px}
+    .meta-pill{font-size:8.5px;padding:5px 7px}
+    .solo-block{gap:12px}
+    .solo-copy{min-width:140px}
+    .solo-btn{padding:13px 18px}
+    .qr-row{gap:13px}
+    .qr-box{flex-basis:124px;width:124px}
+    .room-code{font-size:27px}
+    .hud-top{padding:12px}
+    .hud-brand{min-width:86px}
+    .hud-brand .brand-line{font-size:9px}
+    .coop-chip{font-size:7px;padding:4px 6px}
+    .progress-hud{top:11px;width:min(215px,46vw);padding:6px 8px}
+    .timer-hud{font-size:14px;min-width:75px}
+    .speed-hud{right:15px;bottom:18px}
+    .drive-hint{left:15px;bottom:18px;font-size:7.5px}
+    .end-card{padding:24px 18px}
+  }
+  @media (max-height:650px) and (min-width:901px){
+    #menu{padding-top:12px;padding-bottom:12px}
+    h1.game-title{font-size:clamp(46px,6.1vw,84px)}
+    .eyebrow{margin-bottom:10px}
+    .tagline{margin-top:12px}
+    .hero-meta{margin-top:11px}
+    .solo-block{margin-top:15px;padding-top:14px}
+    .connect-card{padding:16px}
+    .card-head{margin-bottom:11px}
+    .qr-box{flex-basis:148px;width:148px}
+    .players{margin-top:12px}
+    .net-hint{margin-top:9px;min-height:0}
+    .menu-footer{margin-top:10px}
+    .speed-value{font-size:60px}
+  }
+  @media (prefers-reduced-motion:reduce){
+    *,*::before,*::after{animation-duration:.01ms !important;animation-iteration-count:1 !important;transition-duration:.01ms !important;scroll-behavior:auto !important}
+  }
+</style>
+</head>
+<body>
+<canvas id="scene" aria-label="Tampilan 3D game balap orang pertama"></canvas>
+<div class="vignette"></div>
+<div class="noise"></div>
+<div id="speed-fx"></div>
+<div id="explosion-flash"></div>
+
+<div id="hud" aria-live="polite">
+  <div class="hud-top">
+    <div class="hud-brand">
+      <div class="brand-line">FAMILY GAME <span>/</span> <span id="brand-distance-label">1 KM</span></div>
+      <div class="coop-chip" id="coop-chip"><span class="d"></span><span id="coop-label">SOLO DRIVE</span></div>
+    </div>
+    <div class="progress-hud">
+      <div class="progress-labels">
+        <span>Progres rute</span>
+        <b><span id="progress-value">0</span> <em>/ <span id="max-distance-label">1000</span> m</em></b>
+      </div>
+      <div class="progress-track"><div class="progress-fill" id="progress-fill"></div></div>
+    </div>
+    <div style="display:flex;align-items:center">
+      <div class="timer-hud"><span id="timer-value">00:00.00</span><small>WAKTU</small></div>
+      <button class="audio-btn" id="audio-btn" type="button" title="Mute/Unmute Suara">🔊</button>
+    </div>
+  </div>
+  <div class="warn-hud" id="warn-hud">BERHENTI — MELEDAK DALAM <strong id="warn-count">5.0</strong>s</div>
+  <div class="edge-warn" id="edge-warn">AWAS TEPI JURANG</div>
+  <div class="speed-hud">
+    <div class="speed-line"><span class="speed-value" id="speed-value">0</span><span class="speed-unit">km/j</span></div>
+    <div class="speed-bar"><div class="speed-fill" id="speed-fill"></div></div>
+  </div>
+  <div class="drive-hint" id="drive-hint">
+    <kbd>A</kbd> Kiri <div class="divider"></div> <kbd>D</kbd> Kanan <div class="divider"></div> <kbd>S</kbd> Rem
+  </div>
+</div>
+
+<section id="menu" class="screen" aria-label="Menu utama">
+  <div style="width:100%;max-width:1180px">
+    <div class="menu-shell">
+      <header class="hero">
+        <div class="eyebrow">Co-op driving · 2 pemain · satu takdir</div>
+        <h1 class="game-title">
+          <span class="family">Family Game</span>
+          <span class="driver">Driver</span> <span class="amp">&amp;</span> <span class="nav">Navigator</span>
+        </h1>
+        <p class="tagline">
+          Jalan berkelok di atas jurang. <strong>Pengemudi</strong> hanya melihat jalan;
+          <strong>navigator</strong> membaca peta. Jangan saling menyalahkan saat rem telat.
+        </p>
+        <div class="hero-meta">
+          <span class="meta-pill"><b id="pill-distance">1000</b> m</span>
+          <span class="meta-pill"><b>200</b> km/j</span>
+          <span class="meta-pill"><b>45° · 90° · 180°</b></span>
+          <span class="meta-pill">P2P <b>WebRTC</b></span>
+        </div>
+        <div class="dist-group" id="dist-group">
+          <span class="mini-label" style="margin:0;margin-right:4px">JARAK:</span>
+          <button class="dist-btn active" data-dist="1000" type="button">1 KM</button>
+          <button class="dist-btn" data-dist="3000" type="button">3 KM</button>
+          <button class="dist-btn" data-dist="5000" type="button">5 KM</button>
+        </div>
+        <div class="solo-block">
+          <button id="solo-btn" class="btn btn-primary solo-btn" type="button">
+            <span class="play-icon">▶</span> Start Solo
+          </button>
+          <div class="solo-copy">
+            <strong>Keyboard: A / S / D</strong>
+            <span>Tanpa tablet navigasi. Andalkan mata dan tanda tikungan.</span>
+          </div>
+        </div>
+      </header>
+
+      <aside class="connect-card" aria-label="Koneksi pengontrol">
+        <div class="card-head">
+          <div class="card-title"><span class="live-dot"></span> Co-op via HP</div>
+          <div class="status-pill" id="network-status"><i></i><span>Menyiapkan</span></div>
+        </div>
+        <div class="qr-row">
+          <div class="qr-box"><div id="qrcode"></div></div>
+          <div class="room-info">
+            <span class="mini-label">Session room</span>
+            <p class="room-code" id="room-code">·····</p>
+            <p class="room-hint">Scan QR dari Player 1.<br>Player 2 otomatis jadi peran lainnya.</p>
+          </div>
+        </div>
+        <div class="controller-link-row">
+          <a class="controller-link" id="controller-link" href="#" target="_blank" rel="noopener">Controller URL belum diatur</a>
+          <button class="icon-btn" id="copy-link" type="button">Salin</button>
+        </div>
+        <div class="players" aria-label="Status pemain">
+          <div class="player-row" data-slot="p1">
+            <div class="player-slot">P1</div>
+            <div>
+              <div class="player-name">Player 1 <span class="host-tag">HOST</span></div>
+              <div class="player-state">Belum terhubung</div>
+            </div>
+            <span class="role-chip">MENUNGGU</span>
+          </div>
+          <div class="player-row" data-slot="p2">
+            <div class="player-slot">P2</div>
+            <div>
+              <div class="player-name">Player 2</div>
+              <div class="player-state">Slot navigator</div>
+            </div>
+            <span class="role-chip">BELUM ADA</span>
+          </div>
+        </div>
+        <p class="net-hint" id="net-hint">Menyiapkan room PeerJS...</p>
+        <details class="url-setting" id="url-setting">
+          <summary>Atur URL controller GitHub Pages</summary>
+          <div class="url-editor">
+            <input id="controller-url-input" type="url" spellcheck="false" placeholder="https://username.github.io/repo/controller.html" />
+            <button class="icon-btn" id="save-url" type="button">Simpan</button>
+          </div>
+          <p class="url-warning" id="url-warning">Ganti URL placeholder dengan alamat GitHub Pages milikmu agar QR berfungsi.</p>
+        </details>
+      </aside>
+    </div>
+    <footer class="menu-footer">
+      <div class="keys"><span>Kontrol solo</span> <kbd>A</kbd> kiri <kbd>S</kbd> rem <kbd>D</kbd> kanan</div>
+      <div class="seed-text">TRACK SEED <span id="seed-value">········</span></div>
+    </footer>
+  </div>
+</section>
+
+<section id="gameover" class="screen end-screen" hidden aria-label="Game over">
+  <div class="end-card lose">
+    <p class="end-kicker">Crash detected</p>
+    <h2 class="end-title">Mobil<br>Meledak</h2>
+    <p class="end-reason" id="gameover-reason">Mobil tidak bisa bergerak selama 5 detik.</p>
+    <div class="end-stats">
+      <div class="end-stat"><span>Jarak</span><b id="gameover-distance">0 m</b></div>
+      <div class="end-stat"><span>Waktu</span><b id="gameover-time">00:00.00</b></div>
+    </div>
+    <div class="end-actions">
+      <button id="retry-btn" class="btn btn-primary retry-btn" type="button">↻ Ulangi</button>
+    </div>
+    <p class="end-note">Player 1 juga bisa menekan <b>ULANGI</b> di HP.</p>
+  </div>
+</section>
+
+<section id="win" class="screen end-screen" hidden aria-label="Finish">
+  <div class="end-card win">
+    <p class="end-kicker">Finish line · 1000 m</p>
+    <h2 class="end-title">Sampai<br>Juga!</h2>
+    <p class="end-reason">Satu kilometer, ratusan tikungan, nol perceraian. Tim ini selamat.</p>
+    <div class="end-stats">
+      <div class="end-stat"><span>Jarak</span><b>1000 m</b></div>
+      <div class="end-stat"><span>Waktu</span><b id="win-time">00:00.00</b></div>
+      <div class="end-stat"><span>Top speed</span><b id="win-speed">0 km/j</b></div>
+    </div>
+    <div class="end-actions">
+      <button id="win-retry-btn" class="btn btn-primary retry-btn" type="button">↻ Ulangi Rute</button>
+    </div>
+    <p class="end-note">Player 1 juga bisa menekan <b>ULANGI</b> di HP.</p>
+  </div>
+</section>
+
+<div id="loading">
+  <div class="loader-mark"></div>
+  <div class="loader-title">Menyiapkan jalan</div>
+  <div class="loader-status" id="loader-status">Membangun tikungan, jurang, dan dashboard...</div>
+</div>
+<div id="toast" role="status"></div>
+
+<script>
+  // If a CDN module never arrives, don't leave the player on an endless loader.
+  (function () {
+    window.__FGDN_LOAD_WATCHDOG__ = window.setTimeout(function () {
+      var loading = document.getElementById('loading');
+      if (!loading || loading.classList.contains('done') || loading.dataset.error) return;
+      var status = document.getElementById('loader-status');
+      if (status) {
+        status.classList.add('load-error');
+        status.textContent = 'Masih memuat Three.js / PeerJS dari CDN. Periksa koneksi internet lalu muat ulang.';
+      }
+      loading.dataset.error = '1';
+    }, 16000);
+    window.addEventListener('error', function (event) {
+      var loading = document.getElementById('loading');
+      if (!loading || loading.classList.contains('done') || loading.dataset.error) return;
+      var status = document.getElementById('loader-status');
+      if (status && event && event.message) {
+        status.classList.add('load-error');
+        status.textContent = 'Gagal memuat game: ' + event.message;
+        loading.dataset.error = '1';
+      }
+    });
+  })();
+</script>
+<script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js" crossorigin="anonymous"></script>
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js"
+  }
+}
+</script>
+<script type="module">
+/* =========================================================================
+   FAMILY GAME — DRIVER & NAVIGATOR
+   Main game / host: Three.js + PeerJS + QRCode.js
+   ========================================================================= */
+import * as THREE from 'three';
+
+/* -------------------------------------------------------------------------
+   0. CONFIG
+   ------------------------------------------------------------------------- */
+const CONFIG = Object.freeze({
+  // GANTI INI dengan URL controller.html yang sudah di-host di GitHub Pages.
+  CONTROLLER_URL: 'https://YOUR_GITHUB_USERNAME.github.io/family-game-driver-and-navigator/controller.html',
+  PEER_PREFIX: 'fgdn-',
+  TRACK_LENGTH: 1000,
+  MAX_KMH: 200,
+  COUNTDOWN_SECONDS: 5,
+  STUCK_SECONDS: 5,
+  ROAD_HALF_WIDTH: 5.2,
+  // The car is judged by its four body corners and center of mass.
+  CAR_HALF_WIDTH: 0.94,
+  CAR_HALF_LENGTH: 1.95,
+  OFFROAD_LIMIT: 5.5,
+  YIELD_FINISH: 999.8
+});
+
+const PHASE = Object.freeze({
+  LOBBY: 'lobby',
+  COUNTDOWN: 'countdown',
+  PLAYING: 'playing',
+  EXPLODING: 'exploding',
+  GAMEOVER: 'gameover',
+  WIN: 'win'
+});
+
+/* -------------------------------------------------------------------------
+   1. SMALL UTILITIES
+   ------------------------------------------------------------------------- */
+const clamp = (v, min, max) => Math.max(min, Math.min(max, v));
+const lerp = (a, b, t) => a + (b - a) * t;
+const damp = (a, b, rate, dt) => lerp(a, b, 1 - Math.exp(-rate * dt));
+const round1 = (v) => Math.round(v * 10) / 10;
+const kmhToMs = (kmh) => kmh / 3.6;
+
+function formatTime(seconds) {
+  const total = Math.max(0, seconds);
+  const m = Math.floor(total / 60);
+  const s = Math.floor(total % 60);
+  const cs = Math.floor((total % 1) * 100);
+  return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}.${String(cs).padStart(2, '0')}`;
+}
+
+function randomSeed32() {
+  const arr = new Uint32Array(1);
+  if (window.crypto && crypto.getRandomValues) crypto.getRandomValues(arr);
+  else arr[0] = (Math.random() * 0xffffffff) >>> 0;
+  return arr[0] >>> 0;
+}
+
+function makeRoomCode(length = 5) {
+  const alphabet = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
+  const bytes = new Uint8Array(length);
+  if (window.crypto && crypto.getRandomValues) crypto.getRandomValues(bytes);
+  else for (let i = 0; i < length; i++) bytes[i] = Math.floor(Math.random() * 256);
+  let out = '';
+  for (let i = 0; i < length; i++) out += alphabet[bytes[i] % alphabet.length];
+  return out;
+}
+
+function mulberry32(seed) {
+  let a = seed >>> 0;
+  return function random() {
+    a |= 0;
+    a = (a + 0x6d2b79f5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+function shuffled(array, rng) {
+  const copy = array.slice();
+  for (let i = copy.length - 1; i > 0; i--) {
+    const j = Math.floor(rng() * (i + 1));
+    [copy[i], copy[j]] = [copy[j], copy[i]];
+  }
+  return copy;
+}
+
+function isLocalHosting() {
+  const host = location.hostname;
+  return location.protocol === 'file:' ||
+    host === 'localhost' ||
+    host === '127.0.0.1' ||
+    host === '0.0.0.0' ||
+    host === '[::1]' ||
+    host.endsWith('.local') ||
+    /^(\d{1,3}\.){3}\d{1,3}$/.test(host);
+}
+
+function safeJsonParse(raw) {
+  if (typeof raw !== 'string') return raw;
+  try { return JSON.parse(raw); } catch { return null; }
+}
+
+/* -------------------------------------------------------------------------
+   2. PROCEDURAL TRACK GENERATOR
+   Exactly 1000 m. Turns strictly alternate L/R. Every refresh = new seed.
+   ------------------------------------------------------------------------- */
+class TrackGenerator {
+  static generate(seed = randomSeed32(), targetLength = 1000) {
+    const rng = mulberry32(seed);
+    const trackLen = Math.max(500, Math.min(10000, targetLength));
+    // Dense sampling gives smooth mesh and reliable lateral collision checks.
+    for (let attempt = 0; attempt < 450; attempt++) {
+      const baseTurns = Math.round((trackLen / 1000) * 7.5);
+      const nTurns = Math.max(5, baseTurns - 1 + Math.floor(rng() * 3));
+      const required = [45, 90, 180];
+      const pool = [45, 45, 45, 90, 90, 90, 180];
+      const types = required.slice();
+      while (types.length < nTurns) types.push(pool[Math.floor(rng() * pool.length)]);
+      const angles = shuffled(types, rng);
+      if (angles[0] === 180) {
+        const swapAt = angles.findIndex((angle) => angle !== 180);
+        if (swapAt > 0) [angles[0], angles[swapAt]] = [angles[swapAt], angles[0]];
+      }
+      if (angles.filter((a) => a === 180).length > Math.max(2, Math.floor(nTurns * 0.35))) continue;
+      if (angles.filter((a) => a === 45).length < 1) continue;
+
+      let sign = rng() < 0.5 ? 1 : -1; // +1 = right, -1 = left
+      const turns = angles.map((angle) => {
+        let radius;
+        if (angle === 45) radius = 30 + rng() * 10;
+        else if (angle === 90) radius = 22 + rng() * 8;
+        else radius = 17 + rng() * 5; // 180° U-turn stays wide enough to see
+        const turn = {
+          angle,
+          dir: sign,
+          radius,
+          arcLength: radius * angle * Math.PI / 180
+        };
+        sign = -sign; // STRICT alternation: right -> left -> right -> left
+        return turn;
+      });
+
+      const arcTotal = turns.reduce((sum, t) => sum + t.arcLength, 0);
+      const available = trackLen - arcTotal;
+      if (available < (nTurns + 1) * 22) continue;
+
+      const weights = [];
+      for (let i = 0; i <= nTurns; i++) weights.push(0.72 + rng() * 0.82);
+      weights[0] = 2.1 + rng() * 0.65;
+      weights[nTurns] = 0.9 + rng() * 0.4;
+      const weightSum = weights.reduce((a, b) => a + b, 0);
+      const straights = weights.map((w) => available * w / weightSum);
+      if (Math.min(...straights) < 20) continue;
+      if (straights[0] < 75 || straights[nTurns] < 30) continue;
+
+      const segments = this.makeSegments(straights, turns);
+      const samples = this.sampleTrack(segments, trackLen);
+      const last = samples[samples.length - 1];
+      if (Math.abs(last.d - trackLen) > 0.01) continue;
+
+      const check = this.validate(samples, trackLen);
+      if (!check.ok) continue;
+
+      const turnInfo = segments
+        .filter((s) => s.type === 'turn')
+        .map((s, i) => ({
+          index: i,
+          d0: s.d0,
+          d1: s.d1,
+          dir: s.dir,
+          angle: s.angle,
+          radius: s.radius
+        }));
+
+      return {
+        seed,
+        attempt,
+        samples,
+        segments,
+        turns: turnInfo,
+        length: trackLen,
+        bounds: check.bounds,
+        closest: check.closest
+      };
+    }
+
+    // Fallback: a safe staircase of alternating 90° turns.
+    return this.fallback(seed, trackLen);
+  }
+
+  static makeSegments(straights, turns) {
+    const segments = [];
+    let d = 0;
+    let x = 0;
+    let z = 0;
+    let theta = 0; // theta 0 points toward world -Z
+    for (let i = 0; i < straights.length; i++) {
+      const length = straights[i];
+      segments.push({ type: 'straight', length, d0: d, d1: d + length, x0: x, z0: z, theta });
+      x += Math.sin(theta) * length;
+      z -= Math.cos(theta) * length;
+      d += length;
+      if (i >= turns.length) continue;
+
+      const t = turns[i];
+      const r = t.radius;
+      let cx, cz;
+      if (t.dir > 0) {
+        cx = x + Math.cos(theta) * r;
+        cz = z + Math.sin(theta) * r;
+      } else {
+        cx = x - Math.cos(theta) * r;
+        cz = z - Math.sin(theta) * r;
+      }
+      const arcLength = r * t.angle * Math.PI / 180;
+      const seg = {
+        type: 'turn',
+        length: arcLength,
+        d0: d,
+        d1: d + arcLength,
+        x0: x,
+        z0: z,
+        theta,
+        dir: t.dir,
+        angle: t.angle,
+        radius: r,
+        cx,
+        cz
+      };
+      segments.push(seg);
+      const thetaEnd = theta + t.dir * t.angle * Math.PI / 180;
+      if (t.dir > 0) {
+        x = cx - Math.cos(thetaEnd) * r;
+        z = cz - Math.sin(thetaEnd) * r;
+      } else {
+        x = cx + Math.cos(thetaEnd) * r;
+        z = cz + Math.sin(thetaEnd) * r;
+      }
+      theta = thetaEnd;
+      d += arcLength;
+    }
+    return segments;
+  }
+
+  static poseAt(segments, distance) {
+    let lo = 0;
+    let hi = segments.length - 1;
+    while (lo < hi) {
+      const mid = (lo + hi) >> 1;
+      if (segments[mid].d1 < distance) lo = mid + 1;
+      else hi = mid;
+    }
+    const seg = segments[lo];
+    const local = clamp(distance - seg.d0, 0, seg.length);
+    if (seg.type === 'straight') {
+      return {
+        x: seg.x0 + Math.sin(seg.theta) * local,
+        z: seg.z0 - Math.cos(seg.theta) * local,
+        theta: seg.theta
+      };
+    }
+    const progress = local / seg.length;
+    const theta = seg.theta + seg.dir * seg.angle * Math.PI / 180 * progress;
+    if (seg.dir > 0) {
+      return {
+        x: seg.cx - Math.cos(theta) * seg.radius,
+        z: seg.cz - Math.sin(theta) * seg.radius,
+        theta
+      };
+    }
+    return {
+      x: seg.cx + Math.cos(theta) * seg.radius,
+      z: seg.cz + Math.sin(theta) * seg.radius,
+      theta
+    };
+  }
+
+  static sampleTrack(segments, trackLen, step = 1) {
+    const samples = [];
+    const count = Math.floor(trackLen / step);
+    let segmentIndex = 0;
+    for (let i = 0; i <= count; i++) {
+      const d = Math.min(trackLen, i * step);
+      while (segmentIndex < segments.length - 1 && d > segments[segmentIndex].d1) segmentIndex++;
+      const pose = this.poseAt(segments, d);
+      samples.push({
+        x: pose.x,
+        z: pose.z,
+        theta: pose.theta,
+        d,
+        si: segmentIndex,
+        rightX: Math.cos(pose.theta),
+        rightZ: Math.sin(pose.theta)
+      });
+    }
+    return samples;
+  }
+
+  static validate(samples, trackLen) {
+    let minX = Infinity, maxX = -Infinity, minZ = Infinity, maxZ = -Infinity;
+    for (const p of samples) {
+      if (p.x < minX) minX = p.x;
+      if (p.x > maxX) maxX = p.x;
+      if (p.z < minZ) minZ = p.z;
+      if (p.z > maxZ) maxZ = p.z;
+    }
+    const bounds = { minX, maxX, minZ, maxZ };
+    const maxSpan = Math.max(1200, (trackLen / 1000) * 800);
+    if (maxX - minX > maxSpan || maxZ - minZ > maxSpan) return { ok: false, bounds };
+
+    const clearance = 16;
+    let closestSq = Infinity;
+    const stride = 2;
+    for (let i = 0; i < samples.length; i += stride) {
+      const a = samples[i];
+      for (let j = i + stride; j < samples.length; j += stride) {
+        const b = samples[j];
+        if (b.si - a.si < 2) continue;
+        const dx = a.x - b.x;
+        const dz = a.z - b.z;
+        const distSq = dx * dx + dz * dz;
+        if (distSq < closestSq) closestSq = distSq;
+        if (distSq < clearance * clearance) {
+          return { ok: false, bounds, closest: Math.sqrt(distSq) };
+        }
+      }
+    }
+    return { ok: true, bounds, closest: Math.sqrt(closestSq) };
+  }
+
+  static fallback(seed, trackLen = 1000) {
+    const turns = [];
+    const straights = [];
+    const count = Math.max(6, Math.round((trackLen / 1000) * 8));
+    for (let i = 0; i < count; i++) {
+      turns.push({ angle: 90, dir: i % 2 === 0 ? 1 : -1, radius: 27, arcLength: 27 * Math.PI / 2 });
+    }
+    const totalArc = turns.reduce((s, t) => s + t.arcLength, 0);
+    const avail = trackLen - totalArc;
+    const straightLen = avail / (count + 1);
+    for (let i = 0; i <= count; i++) {
+      straights.push(straightLen);
+    }
+    const segments = this.makeSegments(straights, turns);
+    const samples = this.sampleTrack(segments, trackLen);
+    const turnInfo = segments.filter((s) => s.type === 'turn').map((s, i) => ({
+      index: i, d0: s.d0, d1: s.d1, dir: s.dir, angle: s.angle, radius: s.radius
+    }));
+    let minX = Infinity, maxX = -Infinity, minZ = Infinity, maxZ = -Infinity;
+    for (const p of samples) {
+      minX = Math.min(minX, p.x); maxX = Math.max(maxX, p.x);
+      minZ = Math.min(minZ, p.z); maxZ = Math.max(maxZ, p.z);
+    }
+    return {
+      seed,
+      attempt: -1,
+      samples,
+      segments,
+      turns: turnInfo,
+      length: trackLen,
+      bounds: { minX, maxX, minZ, maxZ },
+      closest: 0
+    };
+  }
+}
+
+/* -------------------------------------------------------------------------
+   3. CANVAS TEXTURE HELPERS
+   ------------------------------------------------------------------------- */
+function makeCanvas(width, height) {
+  const canvas = document.createElement('canvas');
+  canvas.width = width;
+  canvas.height = height;
+  return canvas;
+}
+
+function traceRoundedRect(ctx, x, y, w, h, radius) {
+  const r = Math.min(radius, Math.abs(w) / 2, Math.abs(h) / 2);
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.lineTo(x + w - r, y);
+  ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+  ctx.lineTo(x + w, y + h - r);
+  ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+  ctx.lineTo(x + r, y + h);
+  ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+  ctx.lineTo(x, y + r);
+  ctx.quadraticCurveTo(x, y, x + r, y);
+  ctx.closePath();
+}
+
+function makeAsphaltTexture(renderer) {
+  const canvas = makeCanvas(256, 512);
+  const ctx = canvas.getContext('2d');
+  ctx.fillStyle = '#242a31';
+  ctx.fillRect(0, 0, 256, 512);
+  const grad = ctx.createLinearGradient(0, 0, 256, 0);
+  grad.addColorStop(0, 'rgba(0,0,0,0.16)');
+  grad.addColorStop(0.28, 'rgba(255,255,255,0.025)');
+  grad.addColorStop(0.5, 'rgba(0,0,0,0.08)');
+  grad.addColorStop(0.72, 'rgba(255,255,255,0.025)');
+  grad.addColorStop(1, 'rgba(0,0,0,0.16)');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, 256, 512);
+  for (let i = 0; i < 4300; i++) {
+    const x = Math.random() * 256;
+    const y = Math.random() * 512;
+    const a = 0.02 + Math.random() * 0.12;
+    const light = Math.random() > 0.48;
+    ctx.fillStyle = light ? `rgba(190,205,214,${a})` : `rgba(0,0,0,${a * 1.4})`;
+    ctx.fillRect(x, y, 1 + Math.random() * 2, 1 + Math.random() * 2);
+  }
+  // subtle darker wheel tracks
+  ctx.fillStyle = 'rgba(0,0,0,.09)';
+  ctx.fillRect(54, 0, 30, 512);
+  ctx.fillRect(172, 0, 30, 512);
+  const tex = new THREE.CanvasTexture(canvas);
+  tex.wrapS = THREE.RepeatWrapping;
+  tex.wrapT = THREE.RepeatWrapping;
+  tex.colorSpace = THREE.SRGBColorSpace;
+  tex.anisotropy = Math.min(8, renderer.capabilities.getMaxAnisotropy());
+  return tex;
+}
+
+function makeSoftParticleTexture() {
+  const canvas = makeCanvas(128, 128);
+  const ctx = canvas.getContext('2d');
+  const grad = ctx.createRadialGradient(64, 64, 1, 64, 64, 62);
+  grad.addColorStop(0, 'rgba(255,255,255,1)');
+  grad.addColorStop(0.25, 'rgba(255,255,255,.85)');
+  grad.addColorStop(0.56, 'rgba(255,255,255,.25)');
+  grad.addColorStop(1, 'rgba(255,255,255,0)');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, 128, 128);
+  const tex = new THREE.CanvasTexture(canvas);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  return tex;
+}
+
+function makeFireTexture() {
+  const canvas = makeCanvas(96, 96);
+  const ctx = canvas.getContext('2d');
+  const grad = ctx.createRadialGradient(48, 48, 1, 48, 48, 47);
+  grad.addColorStop(0, 'rgba(255,255,228,1)');
+  grad.addColorStop(0.2, 'rgba(255,224,112,1)');
+  grad.addColorStop(0.48, 'rgba(255,128,35,.82)');
+  grad.addColorStop(0.76, 'rgba(221,44,18,.28)');
+  grad.addColorStop(1, 'rgba(110,12,2,0)');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, 96, 96);
+  const tex = new THREE.CanvasTexture(canvas);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  return tex;
+}
+
+function makeArrowSignTexture(direction, angle) {
+  const canvas = makeCanvas(512, 512);
+  const ctx = canvas.getContext('2d');
+  ctx.clearRect(0, 0, 512, 512);
+  // panel
+  ctx.save();
+  ctx.translate(256, 256);
+  ctx.fillStyle = '#071b2b';
+  ctx.strokeStyle = '#ffd166';
+  ctx.lineWidth = 18;
+  traceRoundedRect(ctx, -196, -196, 392, 392, 34);
+  ctx.fill();
+  ctx.stroke();
+  ctx.strokeStyle = 'rgba(115,230,255,.35)';
+  ctx.lineWidth = 4;
+  traceRoundedRect(ctx, -167, -167, 334, 334, 24);
+  ctx.stroke();
+  ctx.restore();
+
+  // arrow
+  ctx.save();
+  ctx.translate(256, 246);
+  ctx.strokeStyle = '#f6fcff';
+  ctx.fillStyle = '#f6fcff';
+  ctx.lineWidth = 48;
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+  const dir = direction === 'left' ? -1 : 1;
+  ctx.beginPath();
+  ctx.moveTo(-66 * dir, 64);
+  ctx.quadraticCurveTo(70 * dir, 44, 78 * dir, -64);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(78 * dir, -118);
+  ctx.lineTo(30 * dir, -55);
+  ctx.lineTo(126 * dir, -48);
+  ctx.closePath();
+  ctx.fill();
+  ctx.restore();
+
+  ctx.textAlign = 'center';
+  ctx.fillStyle = '#ffd166';
+  ctx.font = '700 72px Bahnschrift, Arial, sans-serif';
+  ctx.fillText(`${angle}°`, 256, 384);
+  const tex = new THREE.CanvasTexture(canvas);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  tex.minFilter = THREE.LinearFilter;
+  return tex;
+}
+
+function makeBannerTexture(text, subtext) {
+  const canvas = makeCanvas(1024, 192);
+  const ctx = canvas.getContext('2d');
+  ctx.fillStyle = '#06131f';
+  ctx.fillRect(0, 0, 1024, 192);
+  ctx.strokeStyle = 'rgba(255,255,255,.42)';
+  ctx.lineWidth = 4;
+  for (let x = 0; x < 1024; x += 64) {
+    ctx.strokeRect(x, 0, 64, 48);
+    ctx.strokeRect(x + 32, 48, 64, 48);
+    ctx.strokeRect(x, 96, 64, 48);
+    ctx.strokeRect(x + 32, 144, 64, 48);
+  }
+  ctx.fillStyle = 'rgba(4,15,24,.88)';
+  ctx.fillRect(0, 38, 1024, 116);
+  ctx.fillStyle = '#f5fbff';
+  ctx.font = '800 76px Bahnschrift, Arial Narrow, Arial, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(text, 512, 90);
+  if (subtext) {
+    ctx.fillStyle = '#ffd166';
+    ctx.font = '700 24px Bahnschrift, Arial, sans-serif';
+    ctx.fillText(subtext, 512, 136);
+  }
+  const tex = new THREE.CanvasTexture(canvas);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  return tex;
+}
+
+function makeCheckerTexture() {
+  const canvas = makeCanvas(512, 96);
+  const ctx = canvas.getContext('2d');
+  const size = 32;
+  for (let y = 0; y < 96; y += size) {
+    for (let x = 0; x < 512; x += size) {
+      const dark = ((x / size) + (y / size)) % 2 === 0;
+      ctx.fillStyle = dark ? '#07131f' : '#f3fbff';
+      ctx.fillRect(x, y, size, size);
+    }
+  }
+  const tex = new THREE.CanvasTexture(canvas);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  tex.wrapS = THREE.RepeatWrapping;
+  tex.wrapT = THREE.RepeatWrapping;
+  return tex;
+}
+
+/* -------------------------------------------------------------------------
+   4. TRACK WORLD — road, cliffs, chasms, signs, sky
+   ------------------------------------------------------------------------- */
+class TrackWorld {
+  constructor(track, scene, renderer) {
+    this.track = track;
+    this.scene = scene;
+    this.renderer = renderer;
+    this.group = new THREE.Group();
+    this.group.name = 'track-world';
+    scene.add(this.group);
+    this.fireTexture = makeFireTexture();
+    this.signTextures = new Map();
+    this.signPoleMaterial = new THREE.MeshStandardMaterial({ color: 0x17222a, roughness: 0.74, metalness: 0.22 });
+    this.sunDirection = new THREE.Vector3(-0.48, 0.22, -0.84).normalize();
+    this.setupSkyAndLights();
+    this.buildAbyss();
+    this.buildRoad();
+    this.buildRoadsideFurniture();
+    this.buildGates();
+    this.buildDistantScenery();
+  }
+
+  setupSkyAndLights() {
+    this.scene.background = new THREE.Color(0x081624);
+    this.scene.fog = new THREE.FogExp2(0x0b1b2a, 0.0067);
+
+    const skyGeo = new THREE.SphereGeometry(850, 36, 20);
+    const skyMat = new THREE.ShaderMaterial({
+      uniforms: {
+        sunDirection: { value: this.sunDirection.clone() }
+      },
+      vertexShader: `
+        varying vec3 vWorldPosition;
+        void main() {
+          vec4 worldPosition = modelMatrix * vec4(position, 1.0);
+          vWorldPosition = worldPosition.xyz;
+          gl_Position = projectionMatrix * viewMatrix * worldPosition;
+        }
+      `,
+      fragmentShader: `
+        uniform vec3 sunDirection;
+        varying vec3 vWorldPosition;
+        void main() {
+          vec3 dir = normalize(vWorldPosition);
+          float h = clamp(dir.y, -0.08, 1.0);
+          vec3 horizon = vec3(0.115, 0.197, 0.257);
+          vec3 lower = vec3(0.035, 0.083, 0.13);
+          vec3 zenith = vec3(0.01, 0.027, 0.055);
+          vec3 color = mix(lower, horizon, smoothstep(-0.06, 0.10, h));
+          color = mix(color, zenith, smoothstep(0.10, 0.72, h));
+          float sun = max(dot(dir, normalize(sunDirection)), 0.0);
+          color += vec3(1.0, 0.45, 0.17) * pow(sun, 520.0) * 2.0;
+          color += vec3(1.0, 0.38, 0.14) * pow(sun, 10.0) * 0.12;
+          float horizonGlow = smoothstep(0.26, 0.0, abs(h + 0.005));
+          color += vec3(0.17, 0.075, 0.035) * horizonGlow;
+          gl_FragColor = vec4(color, 1.0);
+        }
+      `,
+      side: THREE.BackSide,
+      depthWrite: false,
+      fog: false
+    });
+    const sky = new THREE.Mesh(skyGeo, skyMat);
+    sky.frustumCulled = false;
+    this.scene.add(sky);
+
+    // Tiny star field. Fog-free so it survives against the gradient.
+    const rng = mulberry32(this.track.seed ^ 0x51f15e);
+    const starCount = 260;
+    const starPositions = new Float32Array(starCount * 3);
+    for (let i = 0; i < starCount; i++) {
+      const theta = rng() * Math.PI * 2;
+      const y = 0.12 + rng() * 0.85;
+      const radius = 700;
+      const ring = Math.sqrt(1 - y * y);
+      starPositions[i * 3] = Math.cos(theta) * ring * radius;
+      starPositions[i * 3 + 1] = y * radius;
+      starPositions[i * 3 + 2] = Math.sin(theta) * ring * radius;
+    }
+    const starGeo = new THREE.BufferGeometry();
+    starGeo.setAttribute('position', new THREE.BufferAttribute(starPositions, 3));
+    const starMat = new THREE.PointsMaterial({
+      color: 0xb9d9ec,
+      size: 1.6,
+      transparent: true,
+      opacity: 0.5,
+      depthWrite: false,
+      fog: false,
+      sizeAttenuation: true
+    });
+    this.scene.add(new THREE.Points(starGeo, starMat));
+
+    const hemi = new THREE.HemisphereLight(0x8bb9d7, 0x101214, 1.05);
+    this.scene.add(hemi);
+    const sun = new THREE.DirectionalLight(0xffc8a0, 2.1);
+    sun.position.copy(this.sunDirection).multiplyScalar(240);
+    this.scene.add(sun);
+    const fill = new THREE.DirectionalLight(0x5799c1, 0.5);
+    fill.position.set(120, 60, 160);
+    this.scene.add(fill);
+  }
+
+  buildAbyss() {
+    const floorMat = new THREE.MeshStandardMaterial({
+      color: 0x030a11,
+      roughness: 1,
+      metalness: 0
+    });
+    const floor = new THREE.Mesh(new THREE.PlaneGeometry(2600, 2600), floorMat);
+    floor.rotation.x = -Math.PI / 2;
+    floor.position.y = -48;
+    this.scene.add(floor);
+
+    // Soft luminous mist just beneath the bridge, to give the chasm depth.
+    const mistCanvas = makeCanvas(256, 256);
+    const mistCtx = mistCanvas.getContext('2d');
+    const mistGrad = mistCtx.createRadialGradient(128, 128, 0, 128, 128, 128);
+    mistGrad.addColorStop(0, 'rgba(70,145,170,.28)');
+    mistGrad.addColorStop(0.48, 'rgba(31,86,108,.12)');
+    mistGrad.addColorStop(1, 'rgba(10,30,45,0)');
+    mistCtx.fillStyle = mistGrad;
+    mistCtx.fillRect(0, 0, 256, 256);
+    const mistTex = new THREE.CanvasTexture(mistCanvas);
+    mistTex.colorSpace = THREE.SRGBColorSpace;
+    const mist = new THREE.Mesh(
+      new THREE.PlaneGeometry(900, 900),
+      new THREE.MeshBasicMaterial({ map: mistTex, transparent: true, depthWrite: false, opacity: 0.32, blending: THREE.AdditiveBlending })
+    );
+    mist.rotation.x = -Math.PI / 2;
+    mist.position.y = -31;
+    mist.position.x = (this.track.bounds.minX + this.track.bounds.maxX) / 2;
+    mist.position.z = (this.track.bounds.minZ + this.track.bounds.maxZ) / 2;
+    this.scene.add(mist);
+  }
+
+  buildRoad() {
+    const half = CONFIG.ROAD_HALF_WIDTH;
+    const samples = this.track.samples;
+    const count = samples.length;
+    const positions = new Float32Array(count * 2 * 3);
+    const uvs = new Float32Array(count * 2 * 2);
+    const indices = [];
+    for (let i = 0; i < count; i++) {
+      const s = samples[i];
+      const lx = s.x - s.rightX * half;
+      const lz = s.z - s.rightZ * half;
+      const rx = s.x + s.rightX * half;
+      const rz = s.z + s.rightZ * half;
+      positions[i * 6] = lx;
+      positions[i * 6 + 1] = 0;
+      positions[i * 6 + 2] = lz;
+      positions[i * 6 + 3] = rx;
+      positions[i * 6 + 4] = 0;
+      positions[i * 6 + 5] = rz;
+      uvs[i * 4] = 0;
+      uvs[i * 4 + 1] = s.d / 13;
+      uvs[i * 4 + 2] = 1;
+      uvs[i * 4 + 3] = s.d / 13;
+      if (i < count - 1) {
+        const a = i * 2;
+        const b = a + 1;
+        const c = a + 2;
+        const d = a + 3;
+        indices.push(a, b, c, b, d, c);
+      }
+    }
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+    geo.setAttribute('uv', new THREE.BufferAttribute(uvs, 2));
+    geo.setIndex(indices);
+    geo.computeVertexNormals();
+    const mat = new THREE.MeshStandardMaterial({
+      map: makeAsphaltTexture(this.renderer),
+      color: 0xffffff,
+      roughness: 0.88,
+      metalness: 0.03
+    });
+    const road = new THREE.Mesh(geo, mat);
+    road.name = 'asphalt';
+    this.group.add(road);
+    this.roadMesh = road;
+
+    // White edge lines — the primary visual guide down the mountain.
+    const edgeMat = new THREE.MeshBasicMaterial({
+      color: 0xe9fdff,
+      transparent: true,
+      opacity: 0.86,
+      depthWrite: false,
+      toneMapped: false
+    });
+    this.group.add(this.buildRibbon(-half + 0.27, 0.14, 0.024, edgeMat));
+    this.group.add(this.buildRibbon(half - 0.27, 0.14, 0.024, edgeMat));
+
+    // Centerline is intentionally sparse and thin: the driver needs sight-reading.
+    const dashMat = new THREE.MeshBasicMaterial({
+      color: 0xbad4df,
+      transparent: true,
+      opacity: 0.36,
+      depthWrite: false,
+      toneMapped: false
+    });
+    this.group.add(this.buildCenterDashes(dashMat));
+
+    this.buildCliffWalls();
+
+    // Elevated viaduct supports disappearing into the fog. Their tops stop
+    // well below the underside of the deck (y <= -4.5) so they can never poke through the road.
+    const supportMat = new THREE.MeshStandardMaterial({ color: 0x0e1a22, roughness: 1, metalness: 0.02 });
+    const supportGeo = new THREE.CylinderGeometry(0.85, 1.5, 40, 9, 1);
+    const supportCount = Math.floor(this.track.length / 58);
+    const supports = new THREE.InstancedMesh(supportGeo, supportMat, supportCount);
+    const dummy = new THREE.Object3D();
+    for (let i = 0; i < supportCount; i++) {
+      const s = this.track.samples[Math.min(this.track.samples.length - 1, (i + 1) * 58)];
+      // Geometry spans -20..+20 locally. With y = -24.5, every pillar top ends at
+      // y = -4.5, safely underneath the asphalt, cliff rim, and turn curves.
+      dummy.position.set(s.x, -24.5, s.z);
+      dummy.rotation.set(0, s.theta, 0);
+      dummy.scale.set(1 + (i % 2) * 0.08, 0.97 + (i % 3) * 0.01, 1);
+      dummy.updateMatrix();
+      supports.setMatrixAt(i, dummy.matrix);
+    }
+    supports.instanceMatrix.needsUpdate = true;
+    this.group.add(supports);
+  }
+
+  buildRibbon(offset, width, y, material) {
+    const samples = this.track.samples;
+    const count = samples.length;
+    const positions = [];
+    const uvs = [];
+    const indices = [];
+    for (let i = 0; i < count; i++) {
+      const s = samples[i];
+      const cx = s.x + s.rightX * offset;
+      const cz = s.z + s.rightZ * offset;
+      const ox = s.rightX * width / 2;
+      const oz = s.rightZ * width / 2;
+      positions.push(cx - ox, y, cz - oz);
+      positions.push(cx + ox, y, cz + oz);
+      uvs.push(0, s.d / 8, 1, s.d / 8);
+      if (i < count - 1) {
+        const a = i * 2;
+        const b = a + 1;
+        const c = a + 2;
+        const d = a + 3;
+        indices.push(a, b, c, b, d, c);
+      }
+    }
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+    geo.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
+    geo.setIndex(indices);
+    geo.computeVertexNormals();
+    return new THREE.Mesh(geo, material);
+  }
+
+  buildCenterDashes(material) {
+    const positions = [];
+    const indices = [];
+    let vert = 0;
+    const length = this.track.length;
+    const dashLength = 6;
+    const gap = 14;
+    for (let d = 12; d < length - 8; d += gap) {
+      const p0 = TrackGenerator.poseAt(this.track.segments, d);
+      const p1 = TrackGenerator.poseAt(this.track.segments, Math.min(length, d + dashLength));
+      const w = 0.11;
+      for (const p of [p0, p1]) {
+        const rx = Math.cos(p.theta) * w / 2;
+        const rz = Math.sin(p.theta) * w / 2;
+        positions.push(p.x - rx, 0.03, p.z - rz);
+        positions.push(p.x + rx, 0.03, p.z + rz);
+      }
+      indices.push(vert, vert + 1, vert + 2, vert + 1, vert + 3, vert + 2);
+      vert += 4;
+    }
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+    geo.setIndex(indices);
+    geo.computeVertexNormals();
+    return new THREE.Mesh(geo, material);
+  }
+
+  buildCliffWalls() {
+    const half = CONFIG.ROAD_HALF_WIDTH;
+    const samples = this.track.samples;
+    const layers = [
+      { y: -0.04, out: 0.02, color: new THREE.Color(0x2b2923) },
+      { y: -1.2, out: 0.4, color: new THREE.Color(0x352c23) },
+      { y: -4.8, out: 1.8, color: new THREE.Color(0x211e1a) },
+      { y: -11.5, out: 4.2, color: new THREE.Color(0x11161a) }
+    ];
+    const positions = [];
+    const colors = [];
+    const indices = [];
+    let base = 0;
+    for (const side of [-1, 1]) {
+      for (let l = 0; l < layers.length; l++) {
+        const layer = layers[l];
+        for (let i = 0; i < samples.length; i++) {
+          const s = samples[i];
+          const wobble = l === layers.length - 1
+            ? Math.sin(s.d * 0.11 + side) * 1.15 + Math.sin(s.d * 0.031) * 0.8
+            : Math.sin(s.d * 0.045 + side * 2) * 0.12;
+          const out = half + layer.out + wobble;
+          positions.push(
+            s.x + side * s.rightX * out,
+            layer.y + (l === layers.length - 1 ? Math.sin(s.d * 0.07) * 0.7 : 0),
+            s.z + side * s.rightZ * out
+          );
+          const c = layer.color.clone();
+          c.offsetHSL((Math.sin(i * 1.7 + l) * 0.012), 0, (Math.sin(i * 0.41 + l * 2.1) * 0.018));
+          colors.push(c.r, c.g, c.b);
+        }
+      }
+    }
+    for (const sideOffset of [0, 1]) {
+      for (let l = 0; l < layers.length - 1; l++) {
+        const rowA = sideOffset * layers.length + l;
+        const rowB = rowA + 1;
+        for (let i = 0; i < samples.length - 1; i++) {
+          const a = (rowA * samples.length) + i;
+          const b = a + 1;
+          const c = (rowB * samples.length) + i;
+          const d = c + 1;
+          indices.push(a, b, c, b, d, c);
+        }
+      }
+      base += layers.length * samples.length;
+    }
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+    geo.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+    geo.setIndex(indices);
+    geo.computeVertexNormals();
+    const mat = new THREE.MeshStandardMaterial({
+      vertexColors: true,
+      roughness: 1,
+      metalness: 0.01,
+      side: THREE.DoubleSide
+    });
+    const cliffs = new THREE.Mesh(geo, mat);
+    this.group.add(cliffs);
+  }
+
+  buildRoadsideFurniture() {
+    const half = CONFIG.ROAD_HALF_WIDTH;
+    const samples = this.track.samples;
+    const spacing = 16;
+    const positions = [];
+    for (let d = 8; d < this.track.length - 4; d += spacing) {
+      const s = samples[Math.min(samples.length - 1, Math.round(d))];
+      for (const side of [-1, 1]) {
+        positions.push({
+          x: s.x + side * s.rightX * (half - 0.33),
+          z: s.z + side * s.rightZ * (half - 0.33),
+          theta: s.theta
+        });
+      }
+    }
+    const postGeo = new THREE.BoxGeometry(0.08, 0.68, 0.08);
+    const postMat = new THREE.MeshStandardMaterial({
+      color: 0xcdd9d4,
+      roughness: 0.55,
+      metalness: 0.12,
+      emissive: 0x293233,
+      emissiveIntensity: 0.25
+    });
+    const posts = new THREE.InstancedMesh(postGeo, postMat, positions.length);
+    const reflectorGeo = new THREE.BoxGeometry(0.14, 0.075, 0.15);
+    const reflectorMat = new THREE.MeshBasicMaterial({ color: 0xffb23e, toneMapped: false });
+    const reflectors = new THREE.InstancedMesh(reflectorGeo, reflectorMat, positions.length);
+    const dummy = new THREE.Object3D();
+    positions.forEach((p, i) => {
+      dummy.position.set(p.x, 0.34, p.z);
+      dummy.rotation.set(0, -p.theta, 0);
+      dummy.scale.set(1, 1, 1);
+      dummy.updateMatrix();
+      posts.setMatrixAt(i, dummy.matrix);
+      dummy.position.y = 0.72;
+      dummy.updateMatrix();
+      reflectors.setMatrixAt(i, dummy.matrix);
+    });
+    posts.instanceMatrix.needsUpdate = true;
+    reflectors.instanceMatrix.needsUpdate = true;
+    this.group.add(posts, reflectors);
+
+    // Warning sign at each turn. Placed on the outside of the curve.
+    for (const turn of this.track.turns) {
+      const d = Math.max(5, turn.d0 - 18);
+      const pose = TrackGenerator.poseAt(this.track.segments, d);
+      const side = turn.dir > 0 ? -1 : 1;
+      const offset = half + 2.2;
+      const sign = this.makeTurnSign(turn);
+      const signX = pose.x + side * Math.cos(pose.theta) * offset;
+      const signZ = pose.z + side * Math.sin(pose.theta) * offset;
+      sign.position.set(signX, 2.35, signZ);
+      const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.06, 2.3, 6), this.signPoleMaterial);
+      pole.position.set(signX, 1.15, signZ);
+      this.group.add(sign, pole);
+    }
+  }
+
+  makeTurnSign(turn) {
+    const key = `${turn.dir}-${turn.angle}`;
+    let texture = this.signTextures.get(key);
+    if (!texture) {
+      texture = makeArrowSignTexture(turn.dir > 0 ? 'right' : 'left', turn.angle);
+      this.signTextures.set(key, texture);
+    }
+    const material = new THREE.SpriteMaterial({
+      map: texture,
+      transparent: true,
+      depthWrite: false,
+      toneMapped: false
+    });
+    const sprite = new THREE.Sprite(material);
+    sprite.scale.set(2.5, 2.5, 1);
+    return sprite;
+  }
+
+  buildGates() {
+    this.buildGate(28, 'START', '1 KILOMETER');
+    this.buildGate(this.track.length - 4, 'FINISH', 'JANGAN MELAMBAT');
+    const checker = makeCheckerTexture();
+    this.addCheckerLine(2, checker);
+    this.addCheckerLine(this.track.length - 1, checker);
+  }
+
+  addCheckerLine(distance, texture) {
+    const pose = TrackGenerator.poseAt(this.track.segments, distance);
+    const width = CONFIG.ROAD_HALF_WIDTH * 2 - 0.5;
+    const mat = new THREE.MeshBasicMaterial({
+      map: texture,
+      side: THREE.DoubleSide,
+      toneMapped: false
+    });
+    mat.map = texture.clone();
+    mat.map.wrapS = THREE.RepeatWrapping;
+    mat.map.repeat.set(6, 1);
+    mat.map.needsUpdate = true;
+    const line = new THREE.Mesh(new THREE.PlaneGeometry(width, 1.6), mat);
+    line.rotation.x = -Math.PI / 2;
+    line.position.set(pose.x, 0.035, pose.z);
+    line.rotation.z = -pose.theta;
+    // rotation.z on a rotated plane is not the yaw we want; use a parent.
+    const holder = new THREE.Group();
+    holder.position.set(pose.x, 0.035, pose.z);
+    holder.rotation.y = -pose.theta;
+    line.position.set(0, 0, 0);
+    line.rotation.set(-Math.PI / 2, 0, 0);
+    holder.add(line);
+    this.group.add(holder);
+  }
+
+  buildGate(distance, text, subtext) {
+    const pose = TrackGenerator.poseAt(this.track.segments, distance);
+    const group = new THREE.Group();
+    group.position.set(pose.x, 0, pose.z);
+    group.rotation.y = -pose.theta;
+    const pillarGeo = new THREE.BoxGeometry(0.24, 4.65, 0.24);
+    const pillarMat = new THREE.MeshStandardMaterial({ color: 0x101c25, roughness: 0.55, metalness: 0.45 });
+    const trimMat = new THREE.MeshBasicMaterial({ color: 0x6de6ff, toneMapped: false });
+    const half = CONFIG.ROAD_HALF_WIDTH + 0.66;
+    for (const side of [-1, 1]) {
+      const pillar = new THREE.Mesh(pillarGeo, pillarMat);
+      pillar.position.set(side * half, 2.32, 0);
+      group.add(pillar);
+      const trim = new THREE.Mesh(new THREE.BoxGeometry(0.06, 4.3, 0.26), trimMat);
+      trim.position.set(side * (half - 0.14), 2.32, 0);
+      group.add(trim);
+      const foot = new THREE.Mesh(
+        new THREE.BoxGeometry(0.65, 0.18, 0.65),
+        new THREE.MeshStandardMaterial({ color: 0x222a2d, roughness: 0.8 })
+      );
+      foot.position.set(side * half, 0.09, 0);
+      group.add(foot);
+    }
+    const bar = new THREE.Mesh(
+      new THREE.BoxGeometry((half + 0.1) * 2, 0.34, 0.32),
+      new THREE.MeshStandardMaterial({ color: 0x101c25, roughness: 0.45, metalness: 0.5 })
+    );
+    bar.position.y = 4.6;
+    group.add(bar);
+    const bannerTex = makeBannerTexture(text, subtext);
+    const banner = new THREE.Mesh(
+      new THREE.PlaneGeometry((half + 0.1) * 2 - 0.3, 1.55),
+      new THREE.MeshBasicMaterial({ map: bannerTex, side: THREE.DoubleSide, toneMapped: false })
+    );
+    banner.position.set(0, 4.6, 0.19);
+    group.add(banner);
+    const lightBar = new THREE.Mesh(
+      new THREE.BoxGeometry(2.9, 0.035, 0.05),
+      new THREE.MeshBasicMaterial({ color: 0xffd166, toneMapped: false })
+    );
+    lightBar.position.set(0, 4.0, 0.15);
+    group.add(lightBar);
+    this.group.add(group);
+  }
+
+  buildDistantScenery() {
+    const rng = mulberry32(this.track.seed ^ 0x77aa33);
+    const bounds = this.track.bounds;
+    const centerX = (bounds.minX + bounds.maxX) / 2;
+    const centerZ = (bounds.minZ + bounds.maxZ) / 2;
+    const span = Math.max(260, bounds.maxX - bounds.minX, bounds.maxZ - bounds.minZ);
+
+    // A few ember particles floating far below, just for depth.
+    const emberCount = 180;
+    const positions = new Float32Array(emberCount * 3);
+    for (let i = 0; i < emberCount; i++) {
+      positions[i * 3] = centerX + (rng() - 0.5) * span * 1.7;
+      positions[i * 3 + 1] = -38 + rng() * 24;
+      positions[i * 3 + 2] = centerZ + (rng() - 0.5) * span * 1.7;
+    }
+    const emberGeo = new THREE.BufferGeometry();
+    emberGeo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+    const emberMat = new THREE.PointsMaterial({
+      color: 0xff9b54,
+      size: 0.65,
+      transparent: true,
+      opacity: 0.32,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false,
+      fog: true
+    });
+    this.scene.add(new THREE.Points(emberGeo, emberMat));
+  }
+}
+
+/* -------------------------------------------------------------------------
+   5. NAVIGATION MAP RENDERER
+   White road line on deep blue. Shared visual language with the phone map.
+   ------------------------------------------------------------------------- */
+class NavigationRenderer {
+  static draw(ctx, width, height, route, state = {}, options = {}) {
+    const dpr = options.dpr || 1;
+    ctx.save();
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.clearRect(0, 0, width, height);
+
+    const bg = ctx.createLinearGradient(0, 0, width, height);
+    bg.addColorStop(0, '#071a2d');
+    bg.addColorStop(0.55, '#041322');
+    bg.addColorStop(1, '#020c17');
+    ctx.fillStyle = bg;
+    ctx.fillRect(0, 0, width, height);
+
+    // subtle grid
+    ctx.strokeStyle = 'rgba(112,193,224,.055)';
+    ctx.lineWidth = 1;
+    const grid = options.compact ? 32 : 28;
+    for (let x = grid / 2; x < width; x += grid) {
+      ctx.beginPath();
+      ctx.moveTo(x, 0);
+      ctx.lineTo(x, height);
+      ctx.stroke();
+    }
+    for (let y = grid / 2; y < height; y += grid) {
+      ctx.beginPath();
+      ctx.moveTo(0, y);
+      ctx.lineTo(width, y);
+      ctx.stroke();
+    }
+
+    if (!route || !route.points || route.points.length < 2) {
+      ctx.fillStyle = 'rgba(179,221,238,.45)';
+      ctx.font = `600 ${options.compact ? 10 : 11}px Bahnschrift, Arial, sans-serif`;
+      ctx.textAlign = 'center';
+      ctx.fillText('MENUNGGU PETA RUTE', width / 2, height / 2);
+      ctx.restore();
+      return;
+    }
+
+    const points = route.points;
+    const b = route.bounds || NavigationRenderer.boundsOf(points);
+    const pad = options.compact ? 23 : 28;
+    const usableW = Math.max(1, width - pad * 2);
+    const usableH = Math.max(1, height - pad * 2);
+    const rangeX = Math.max(1, b.maxX - b.minX);
+    const rangeZ = Math.max(1, b.maxZ - b.minZ);
+    const scale = Math.min(usableW / rangeX, usableH / rangeZ);
+    const offsetX = (width - rangeX * scale) / 2 - b.minX * scale;
+    const offsetY = (height - rangeZ * scale) / 2 - b.minZ * scale;
+    const project = (x, z) => [x * scale + offsetX, z * scale + offsetY];
+    const total = route.length || 1000;
+
+    // Route underlay / glow.
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.beginPath();
+    let p = project(points[0].x, points[0].z);
+    ctx.moveTo(p[0], p[1]);
+    for (let i = 1; i < points.length; i++) {
+      p = project(points[i].x, points[i].z);
+      ctx.lineTo(p[0], p[1]);
+    }
+    ctx.strokeStyle = 'rgba(108,210,241,.13)';
+    ctx.lineWidth = options.compact ? 9 : 10;
+    ctx.stroke();
+    ctx.strokeStyle = 'rgba(236,250,255,.26)';
+    ctx.lineWidth = options.compact ? 2.4 : 2.8;
+    ctx.stroke();
+
+    // Upcoming section: bright white. Completed section stays quiet.
+    const progress = clamp(Number(state.progress) || 0, 0, total);
+    const indexFloat = (progress / total) * (points.length - 1);
+    const carIndex = clamp(Math.round(indexFloat), 0, points.length - 1);
+    ctx.beginPath();
+    p = project(points[carIndex].x, points[carIndex].z);
+    ctx.moveTo(p[0], p[1]);
+    for (let i = carIndex + 1; i < points.length; i++) {
+      p = project(points[i].x, points[i].z);
+      ctx.lineTo(p[0], p[1]);
+    }
+    ctx.strokeStyle = '#f8fdff';
+    ctx.lineWidth = options.compact ? 2.8 : 3.3;
+    ctx.shadowColor = 'rgba(177,239,255,.5)';
+    ctx.shadowBlur = 8;
+    ctx.stroke();
+    ctx.shadowBlur = 0;
+
+    // Start / finish markers.
+    const start = project(points[0].x, points[0].z);
+    ctx.beginPath();
+    ctx.arc(start[0], start[1], options.compact ? 3.1 : 3.8, 0, Math.PI * 2);
+    ctx.fillStyle = '#5ff0bb';
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(5,23,35,.9)';
+    ctx.lineWidth = 1.2;
+    ctx.stroke();
+
+    const finish = project(points[points.length - 1].x, points[points.length - 1].z);
+    const checkSize = options.compact ? 3.2 : 3.8;
+    for (let ix = 0; ix < 2; ix++) {
+      for (let iy = 0; iy < 2; iy++) {
+        ctx.fillStyle = (ix + iy) % 2 === 0 ? '#f8fdff' : '#0b1b28';
+        ctx.fillRect(finish[0] - checkSize + ix * checkSize, finish[1] - checkSize + iy * checkSize, checkSize, checkSize);
+      }
+    }
+    ctx.strokeStyle = 'rgba(248,253,255,.7)';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(finish[0] - checkSize, finish[1] - checkSize, checkSize * 2, checkSize * 2);
+
+    // Upcoming turn is marked with a pulsing ring.
+    let marker = null;
+    if (route.turns && route.turns.length) {
+      for (const t of route.turns) {
+        if (t.d1 + 2 >= progress) { marker = t; break; }
+      }
+    }
+    if (marker) {
+      const turnProgress = clamp(Math.max(progress, Math.min(marker.d0, total)), 0, total);
+      const ti = Math.round((turnProgress / total) * (points.length - 1));
+      const tp = project(points[clamp(ti, 0, points.length - 1)].x, points[clamp(ti, 0, points.length - 1)].z);
+      const pulse = 0.5 + 0.5 * Math.sin((state.time || 0) * 4.2);
+      ctx.beginPath();
+      ctx.arc(tp[0], tp[1], (options.compact ? 5 : 6) + pulse * 2.5, 0, Math.PI * 2);
+      ctx.strokeStyle = `rgba(255,209,102,${0.3 + pulse * 0.4})`;
+      ctx.lineWidth = 1.3;
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.arc(tp[0], tp[1], options.compact ? 2.1 : 2.6, 0, Math.PI * 2);
+      ctx.fillStyle = '#ffd166';
+      ctx.fill();
+    }
+
+    // Driver's live position. The little arrow points exactly where the car is facing.
+    const carPos = (typeof state.x === 'number' && typeof state.z === 'number')
+      ? project(state.x, state.z)
+      : project(points[carIndex].x, points[carIndex].z);
+    const heading = Number(state.heading) || 0;
+    const screenAngle = Math.atan2(-Math.cos(heading), Math.sin(heading));
+    ctx.save();
+    ctx.translate(carPos[0], carPos[1]);
+    // glowing locator
+    ctx.beginPath();
+    ctx.arc(0, 0, options.compact ? 10 : 12, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(255,209,102,.09)';
+    ctx.fill();
+    ctx.rotate(screenAngle);
+    ctx.beginPath();
+    ctx.moveTo(options.compact ? 8.5 : 10, 0);
+    ctx.lineTo(options.compact ? -5.2 : -6.2, options.compact ? 4.8 : 5.8);
+    ctx.lineTo(options.compact ? -2.2 : -2.8, 0);
+    ctx.lineTo(options.compact ? -5.2 : -6.2, options.compact ? -4.8 : -5.8);
+    ctx.closePath();
+    ctx.fillStyle = '#ffd166';
+    ctx.shadowColor = 'rgba(255,209,102,.7)';
+    ctx.shadowBlur = 8;
+    ctx.fill();
+    ctx.shadowBlur = 0;
+    ctx.strokeStyle = 'rgba(255,248,211,.9)';
+    ctx.lineWidth = 0.8;
+    ctx.stroke();
+    ctx.restore();
+
+    // Minimal labels only on the larger phone map.
+    if (!options.compact) {
+      ctx.fillStyle = 'rgba(193,229,245,.56)';
+      ctx.font = '600 9px Bahnschrift, Arial, sans-serif';
+      ctx.textAlign = 'left';
+      ctx.fillText('RUTE / 1 KM', 12, 18);
+      ctx.textAlign = 'right';
+      ctx.fillText(`${Math.round(progress)} M`, width - 12, 18);
+    } else {
+      ctx.fillStyle = 'rgba(193,229,245,.4)';
+      ctx.font = '600 8px Bahnschrift, Arial, sans-serif';
+      ctx.textAlign = 'left';
+      ctx.fillText('NAV / 1 KM', 10, 15);
+    }
+
+    // North marker.
+    ctx.strokeStyle = 'rgba(189,225,242,.32)';
+    ctx.fillStyle = 'rgba(189,225,242,.46)';
+    ctx.lineWidth = 1;
+    const nx = width - (options.compact ? 15 : 18);
+    const ny = height - (options.compact ? 17 : 20);
+    ctx.beginPath();
+    ctx.moveTo(nx, ny - 8);
+    ctx.lineTo(nx - 3.5, ny + 2);
+    ctx.lineTo(nx, ny - 0.5);
+    ctx.lineTo(nx + 3.5, ny + 2);
+    ctx.closePath();
+    ctx.fill();
+    ctx.font = '600 7px Bahnschrift, Arial, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('N', nx, ny + 11);
+
+    ctx.restore();
+  }
+
+  static boundsOf(points) {
+    let minX = Infinity, maxX = -Infinity, minZ = Infinity, maxZ = -Infinity;
+    for (const p of points) {
+      minX = Math.min(minX, p.x);
+      maxX = Math.max(maxX, p.x);
+      minZ = Math.min(minZ, p.z);
+      maxZ = Math.max(maxZ, p.z);
+    }
+    return { minX, maxX, minZ, maxZ };
+  }
+}
+
+/* -------------------------------------------------------------------------
+   6. FIRST-PERSON COCKPIT
+   Everything here is in car-local space. The camera sits in the driver seat.
+   ------------------------------------------------------------------------- */
+class Cockpit {
+  constructor(carRoot, renderer) {
+    this.carRoot = carRoot;
+    this.renderer = renderer;
+    this.root = new THREE.Group();
+    this.root.name = 'cockpit';
+    carRoot.add(this.root);
+    this.cameraBase = new THREE.Vector3(-0.36, 1.322, -0.02);
+    this.tabletVisible = false;
+    this.buildMaterials();
+    this.buildBody();
+    this.buildDashboard();
+    this.buildSteeringWheel();
+    this.buildCluster();
+    this.buildHeadlights();
+    this.lastCluster = 0;
+    this.lastNav = 0;
+    this.drawCluster(0, 'SOLO');
+  }
+
+  buildMaterials() {
+    this.matDark = new THREE.MeshStandardMaterial({ color: 0x1a222b, roughness: 0.69, metalness: 0.2 });
+    this.matDash = new THREE.MeshStandardMaterial({ color: 0x252d34, roughness: 0.83, metalness: 0.08 });
+    this.matDashSoft = new THREE.MeshStandardMaterial({ color: 0x171f26, roughness: 0.94, metalness: 0.03 });
+    this.matTrim = new THREE.MeshStandardMaterial({ color: 0x2b3540, roughness: 0.5, metalness: 0.36 });
+    this.matBody = new THREE.MeshStandardMaterial({ color: 0xb44536, roughness: 0.34, metalness: 0.52 });
+    this.matBodyDark = new THREE.MeshStandardMaterial({ color: 0x6d241e, roughness: 0.5, metalness: 0.38 });
+    this.matGlass = new THREE.MeshPhysicalMaterial({
+      color: 0x89c6dd,
+      roughness: 0.04,
+      metalness: 0.1,
+      transparent: true,
+      opacity: 0.04,
+      side: THREE.DoubleSide,
+      depthWrite: false
+    });
+    this.matScreen = new THREE.MeshBasicMaterial({ color: 0xffffff, toneMapped: false });
+    this.matAccent = new THREE.MeshBasicMaterial({ color: 0x63e4ff, toneMapped: false });
+    this.matAmber = new THREE.MeshBasicMaterial({ color: 0xffb43f, toneMapped: false });
+  }
+
+  addBox(parent, w, h, d, material, x, y, z, rx = 0, ry = 0, rz = 0) {
+    const mesh = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), material);
+    mesh.position.set(x, y, z);
+    mesh.rotation.set(rx, ry, rz);
+    parent.add(mesh);
+    return mesh;
+  }
+
+  buildBody() {
+    const root = this.root;
+    // Visible hood and fenders through the windshield.
+    this.addBox(root, 1.94, 0.17, 1.14, this.matBody, 0, 0.82, -1.62, -0.025, 0, 0);
+    this.addBox(root, 0.045, 0.032, 0.98, this.matBodyDark, 0, 0.92, -1.58, -0.025, 0, 0);
+    this.addBox(root, 0.3, 0.14, 0.9, this.matBody, -0.91, 0.79, -1.55, 0, 0.04, -0.03);
+    this.addBox(root, 0.3, 0.14, 0.9, this.matBody, 0.91, 0.79, -1.55, 0, -0.04, 0.03);
+    this.addBox(root, 1.96, 0.32, 0.24, this.matBodyDark, 0, 0.7, -2.16);
+    // subtle hood vents
+    for (const side of [-1, 1]) {
+      this.addBox(root, 0.19, 0.012, 0.23, this.matTrim, side * 0.47, 0.925, -1.75, -0.025, 0, 0);
+    }
+
+    // Door cards and window sills frame the driver view.
+    this.addBox(root, 0.055, 0.42, 1.28, this.matDashSoft, -0.95, 0.84, -0.25);
+    this.addBox(root, 0.055, 0.42, 1.28, this.matDashSoft, 0.95, 0.84, -0.25);
+    this.addBox(root, 0.075, 0.04, 1.35, this.matTrim, -0.94, 1.055, -0.25);
+    this.addBox(root, 0.075, 0.04, 1.35, this.matTrim, 0.94, 1.055, -0.25);
+    this.addBox(root, 1.9, 0.05, 0.05, this.matTrim, 0, 1.055, 0.42);
+    this.addBox(root, 0.028, 0.56, 0.055, this.matDark, -0.94, 1.3, 0.06, 0, 0, 0.04);
+    this.addBox(root, 0.028, 0.56, 0.055, this.matDark, 0.94, 1.3, 0.06, 0, 0, -0.04);
+
+    // Windshield frame and A-pillars. The top beam is pulled toward the driver
+    // (as a real raked windshield is) so the roof does not eat the sky.
+    this.addBox(root, 1.85, 0.07, 0.15, this.matDark, 0, 1.045, -1.01);
+    this.addBox(root, 1.8, 0.075, 0.13, this.matDark, 0, 1.66, -0.47);
+    for (const side of [-1, 1]) {
+      this.addBox(root, 0.032, 0.84, 0.06, this.matDark, side * 0.94, 1.35, -0.74, 0.7, 0, 0);
+      this.addBox(root, 0.018, 0.77, 0.02, this.matTrim, side * 0.952, 1.35, -0.73, 0.7, 0, 0);
+    }
+    // Headliner sits high enough to frame the view without swallowing it.
+    this.addBox(root, 1.8, 0.05, 0.84, this.matDashSoft, 0, 1.72, -0.1);
+
+    // Windshield wipers.
+    this.addBox(root, 0.03, 0.03, 0.64, this.matDark, -0.3, 1.06, -1.01, 0.02, 0.55, 0.47);
+    this.addBox(root, 0.03, 0.03, 0.64, this.matDark, 0.24, 1.06, -1.01, 0.02, 0.55, 0.47);
+
+    // Faint glass plane; low opacity keeps the scene readable.
+    const glass = new THREE.Mesh(new THREE.PlaneGeometry(1.68, 0.7), this.matGlass);
+    glass.position.set(0, 1.35, -0.79);
+    glass.rotation.x = 0.71;
+    root.add(glass);
+  }
+
+  buildDashboard() {
+    const root = this.root;
+
+    // The upper dashboard is split into left/right pods around the steering
+    // wheel. That leaves a real instrument recess instead of letting the dash
+    // geometry swallow the lower half of the wheel.
+    this.addBox(root, 1.84, 0.28, 0.55, this.matDash, 0, 0.68, -0.79);
+    this.addBox(root, 0.35, 0.22, 0.55, this.matDash, -0.745, 0.94, -0.79);
+    this.addBox(root, 1.04, 0.22, 0.55, this.matDash, 0.40, 0.94, -0.79);
+    this.addBox(root, 0.35, 0.04, 0.54, this.matDash, -0.745, 1.07, -0.79, 0.02, 0, 0);
+    this.addBox(root, 1.04, 0.04, 0.54, this.matDash, 0.40, 1.07, -0.79, 0.02, 0, 0);
+    this.addBox(root, 0.48, 0.30, 0.035, this.matDashSoft, -0.36, 0.97, -1.055);
+    this.addBox(root, 1.72, 0.1, 0.18, this.matDashSoft, 0, 1.005, -1.03, 0.03, 0, 0);
+
+    // Split accent strips follow the cut-out instead of floating over it.
+    this.addBox(root, 0.30, 0.012, 0.01, this.matAccent, -0.745, 1.039, -0.512, 0, 0, 0);
+    this.addBox(root, 0.99, 0.012, 0.01, this.matAccent, 0.40, 1.039, -0.512, 0, 0, 0);
+
+    // Center stack and vents sit on the visible front face of the dash.
+    this.addBox(root, 0.28, 0.20, 0.022, this.matDark, 0.03, 0.94, -0.511);
+    for (const y of [0.985, 0.925]) {
+      this.addBox(root, 0.19, 0.014, 0.012, this.matTrim, 0.03, y, -0.499);
+    }
+    this.addBox(root, 0.09, 0.026, 0.018, this.matAccent, 0.03, 0.865, -0.499);
+    // Passenger-side vents.
+    for (const x of [0.55, 0.68]) {
+      const vent = new THREE.Mesh(new THREE.CylinderGeometry(0.032, 0.032, 0.018, 14), this.matTrim);
+      vent.rotation.x = Math.PI / 2;
+      vent.position.set(x, 0.985, -0.505);
+      root.add(vent);
+      const inside = new THREE.Mesh(new THREE.CircleGeometry(0.024, 14), this.matDark);
+      inside.position.set(x, 0.985, -0.495);
+      root.add(inside);
+    }
+    // Binnacle cheeks frame the instrument opening.
+    this.addBox(root, 0.025, 0.15, 0.14, this.matDashSoft, -0.56, 1.105, -0.86);
+    this.addBox(root, 0.025, 0.15, 0.14, this.matDashSoft, -0.16, 1.105, -0.86);
+
+    // Center console / shifter.
+    this.addBox(root, 0.3, 0.38, 0.66, this.matDashSoft, 0.02, 0.64, -0.35);
+    const gear = new THREE.Mesh(new THREE.CylinderGeometry(0.018, 0.028, 0.23, 8), this.matTrim);
+    gear.position.set(0.03, 0.87, -0.26);
+    gear.rotation.z = -0.24;
+    root.add(gear);
+    const knob = new THREE.Mesh(new THREE.SphereGeometry(0.042, 12, 8), this.matDark);
+    knob.position.set(0.055, 0.99, -0.25);
+    root.add(knob);
+
+    // Interior fill. Warm at the screen, cool from the open windows.
+    const light = new THREE.PointLight(0xffdcc0, 4.8, 4.2, 2);
+    light.position.set(0.05, 1.34, -0.32);
+    root.add(light);
+    const cool = new THREE.PointLight(0x84c8e4, 2.2, 3.4, 2);
+    cool.position.set(-0.55, 1.24, -0.15);
+    root.add(cool);
+  }
+
+  buildSteeringWheel() {
+    this.wheelGroup = new THREE.Group();
+    this.wheelGroup.position.set(-0.36, 1.01, -0.53);
+    this.wheelGroup.rotation.x = -0.32;
+    this.root.add(this.wheelGroup);
+    this.wheelSpin = new THREE.Group();
+    this.wheelGroup.add(this.wheelSpin);
+
+    const rim = new THREE.Mesh(
+      new THREE.TorusGeometry(0.153, 0.018, 10, 36),
+      new THREE.MeshStandardMaterial({ color: 0x141a20, roughness: 0.5, metalness: 0.28 })
+    );
+    this.wheelSpin.add(rim);
+    const center = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.048, 0.052, 0.025, 16),
+      this.matTrim
+    );
+    center.rotation.x = Math.PI / 2;
+    this.wheelSpin.add(center);
+    for (const angle of [0, Math.PI * 0.666, Math.PI * 1.333]) {
+      const spoke = new THREE.Mesh(new THREE.BoxGeometry(0.145, 0.016, 0.018), this.matTrim);
+      spoke.position.set(Math.cos(angle) * 0.078, Math.sin(angle) * 0.078, 0);
+      spoke.rotation.z = angle;
+      this.wheelSpin.add(spoke);
+    }
+    const hubMark = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.012, 0.005), this.matAccent);
+    hubMark.position.set(0, 0, 0.016);
+    this.wheelSpin.add(hubMark);
+
+    const column = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.04, 0.058, 0.38, 12),
+      this.matDark
+    );
+    column.position.set(-0.36, 0.91, -0.68);
+    column.rotation.x = 1.12;
+    this.root.add(column);
+
+    const indicator = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.022, 0.022), this.matDark);
+    indicator.position.set(-0.55, 1.00, -0.60);
+    indicator.rotation.z = 0.18;
+    this.root.add(indicator);
+  }
+
+  buildCluster() {
+    this.clusterCanvas = makeCanvas(512, 244);
+    this.clusterCtx = this.clusterCanvas.getContext('2d');
+    this.clusterTexture = new THREE.CanvasTexture(this.clusterCanvas);
+    this.clusterTexture.colorSpace = THREE.SRGBColorSpace;
+    this.clusterTexture.minFilter = THREE.LinearFilter;
+    const mat = new THREE.MeshBasicMaterial({ map: this.clusterTexture, toneMapped: false });
+    this.clusterScreen = new THREE.Mesh(new THREE.PlaneGeometry(0.286, 0.136), mat);
+    this.clusterGroup = new THREE.Group();
+    this.clusterGroup.position.set(-0.36, 1.085, -0.87);
+    this.clusterGroup.rotation.x = -0.31;
+    this.clusterGroup.add(this.clusterScreen);
+    this.root.add(this.clusterGroup);
+    // hood over the cluster
+    this.addBox(this.root, 0.35, 0.022, 0.16, this.matDashSoft, -0.36, 1.168, -0.835, -0.25, 0, 0);
+    this.drawCluster(0, 'SOLO');
+  }
+
+  drawCluster(speedKmh, mode) {
+    const ctx = this.clusterCtx;
+    const w = 512;
+    const h = 244;
+    ctx.clearRect(0, 0, w, h);
+    const bg = ctx.createLinearGradient(0, 0, 0, h);
+    bg.addColorStop(0, '#07121b');
+    bg.addColorStop(1, '#02080e');
+    ctx.fillStyle = bg;
+    ctx.fillRect(0, 0, w, h);
+    ctx.strokeStyle = 'rgba(115,230,255,.2)';
+    ctx.lineWidth = 3;
+    ctx.strokeRect(2, 2, w - 4, h - 4);
+
+    ctx.fillStyle = 'rgba(128,178,199,.55)';
+    ctx.font = '600 20px Bahnschrift, Arial, sans-serif';
+    ctx.textAlign = 'left';
+    ctx.fillText(mode === 'COOP' ? 'CO-OP' : 'SOLO', 26, 38);
+    ctx.textAlign = 'right';
+    ctx.fillText('KM/J', w - 26, 38);
+
+    ctx.fillStyle = '#f2fcff';
+    ctx.font = '800 118px Bahnschrift, Arial Narrow, Arial, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(String(Math.round(speedKmh)).padStart(3, '0'), w / 2, 148);
+
+    const normalized = clamp(speedKmh / CONFIG.MAX_KMH, 0, 1);
+    const segments = 22;
+    const gap = 4;
+    const totalW = w - 48;
+    const segW = (totalW - gap * (segments - 1)) / segments;
+    for (let i = 0; i < segments; i++) {
+      const active = i / segments < normalized;
+      ctx.fillStyle = active
+        ? (i > 17 ? '#ff7b5e' : (i > 13 ? '#ffd166' : '#72e8ff'))
+        : 'rgba(91,130,147,.17)';
+      ctx.fillRect(24 + i * (segW + gap), 188, segW, 9);
+    }
+    const grad = ctx.createLinearGradient(0, 0, w, 0);
+    grad.addColorStop(0, 'rgba(115,230,255,.65)');
+    grad.addColorStop(1, 'rgba(115,230,255,0)');
+    ctx.fillStyle = grad;
+    ctx.fillRect(24, 208, totalW, 2);
+    this.clusterTexture.needsUpdate = true;
+  }
+
+  buildHeadlights() {
+    const light = new THREE.SpotLight(0xffe2bb, 115, 95, 0.44, 0.72, 1.35);
+    light.position.set(0, 0.82, -1.3);
+    light.target.position.set(0, 0.02, -34);
+    this.carRoot.add(light);
+    this.carRoot.add(light.target);
+    this.headlight = light;
+  }
+
+  setTabletVisible(visible) {
+    // Tablet removed: navigation map is exclusive to the navigator controller.
+  }
+
+  setModeLabel(mode) {
+    this.drawCluster(0, mode === 'coop' ? 'COOP' : 'SOLO');
+  }
+
+  update(time, dt, speedKmh, steer, mode, route, navState) {
+    this.wheelSpin.rotation.z = -steer * 0.95;
+    if (time - this.lastCluster > 0.1) {
+      this.lastCluster = time;
+      this.drawCluster(speedKmh, mode === 'coop' ? 'COOP' : 'SOLO');
+    }
+  }
+}
+
+/* -------------------------------------------------------------------------
+   6.5 PROCEDURAL SOUND SYSTEM (WEB AUDIO API)
+   ------------------------------------------------------------------------- */
+class SoundSystem {
+  constructor() {
+    this.ctx = null;
+    this.muted = false;
+    this.initialized = false;
+
+    this.engineOsc1 = null;
+    this.engineOsc2 = null;
+    this.engineGain = null;
+    this.engineFilter = null;
+
+    this.brakeNoise = null;
+    this.brakeFilter = null;
+    this.brakeGain = null;
+
+    this.bgmGain = null;
+    this.bgmInterval = null;
+    this.bgmStep = 0;
+    this.bgmPlaying = false;
+  }
+
+  init() {
+    if (this.initialized) {
+      if (this.ctx && this.ctx.state === 'suspended') this.ctx.resume();
+      return;
+    }
+    try {
+      const AudioCtx = window.AudioContext || window.webkitAudioContext;
+      if (!AudioCtx) return;
+      this.ctx = new AudioCtx();
+      this.initialized = true;
+      this.setupEngineSound();
+      this.setupBrakeSound();
+      this.setupBgmNode();
+    } catch (e) {
+      console.warn('[FGDN SoundSystem] Web Audio API initialization failed', e);
+    }
+  }
+
+  setupEngineSound() {
+    if (!this.ctx) return;
+    const ctx = this.ctx;
+    this.engineGain = ctx.createGain();
+    this.engineGain.gain.value = 0;
+
+    this.engineFilter = ctx.createBiquadFilter();
+    this.engineFilter.type = 'lowpass';
+    this.engineFilter.frequency.value = 300;
+
+    this.engineOsc1 = ctx.createOscillator();
+    this.engineOsc1.type = 'sawtooth';
+    this.engineOsc1.frequency.value = 45;
+
+    this.engineOsc2 = ctx.createOscillator();
+    this.engineOsc2.type = 'square';
+    this.engineOsc2.frequency.value = 90;
+
+    this.engineOsc1.connect(this.engineFilter);
+    this.engineOsc2.connect(this.engineFilter);
+    this.engineFilter.connect(this.engineGain);
+    this.engineGain.connect(ctx.destination);
+
+    this.engineOsc1.start();
+    this.engineOsc2.start();
+  }
+
+  setupBrakeSound() {
+    if (!this.ctx) return;
+    const ctx = this.ctx;
+    const bufferSize = ctx.sampleRate * 2;
+    const noiseBuffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+    const output = noiseBuffer.getChannelData(0);
+    for (let i = 0; i < bufferSize; i++) output[i] = Math.random() * 2 - 1;
+
+    this.brakeNoise = ctx.createBufferSource();
+    this.brakeNoise.buffer = noiseBuffer;
+    this.brakeNoise.loop = true;
+
+    this.brakeFilter = ctx.createBiquadFilter();
+    this.brakeFilter.type = 'bandpass';
+    this.brakeFilter.frequency.value = 2400;
+    this.brakeFilter.Q.value = 4.5;
+
+    this.brakeGain = ctx.createGain();
+    this.brakeGain.gain.value = 0;
+
+    this.brakeNoise.connect(this.brakeFilter);
+    this.brakeFilter.connect(this.brakeGain);
+    this.brakeGain.connect(ctx.destination);
+
+    this.brakeNoise.start();
+  }
+
+  setupBgmNode() {
+    if (!this.ctx) return;
+    this.bgmGain = this.ctx.createGain();
+    this.bgmGain.gain.value = this.muted ? 0 : 0.16;
+    this.bgmGain.connect(this.ctx.destination);
+  }
+
+  updateEngine(speedKmh, isPlaying) {
+    if (!this.ctx || !this.initialized) return;
+    if (this.ctx.state === 'suspended') this.ctx.resume();
+
+    if (this.muted || !isPlaying) {
+      this.engineGain.gain.setTargetAtTime(0, this.ctx.currentTime, 0.05);
+      return;
+    }
+
+    const normSpeed = Math.min(speedKmh / 200, 1);
+    const pitch = 45 + Math.pow(normSpeed, 0.7) * 235;
+    const filterCutoff = 250 + Math.pow(normSpeed, 0.8) * 1800;
+    const volume = 0.12 + normSpeed * 0.15;
+
+    const t = this.ctx.currentTime;
+    this.engineOsc1.frequency.setTargetAtTime(pitch, t, 0.08);
+    this.engineOsc2.frequency.setTargetAtTime(pitch * 2.01, t, 0.08);
+    this.engineFilter.frequency.setTargetAtTime(filterCutoff, t, 0.08);
+    this.engineGain.gain.setTargetAtTime(volume, t, 0.08);
+  }
+
+  updateBrake(isBraking, speedKmh) {
+    if (!this.ctx || !this.initialized || !this.brakeGain) return;
+    const t = this.ctx.currentTime;
+    if (!this.muted && isBraking && speedKmh > 12) {
+      const screechVol = Math.min(0.22, (speedKmh / 100) * 0.22);
+      this.brakeGain.gain.setTargetAtTime(screechVol, t, 0.04);
+      this.brakeFilter.frequency.setTargetAtTime(2200 + (speedKmh * 8), t, 0.05);
+    } else {
+      this.brakeGain.gain.setTargetAtTime(0, t, 0.06);
+    }
+  }
+
+  playExplosion() {
+    if (!this.ctx || this.muted) return;
+    const ctx = this.ctx;
+    const t = ctx.currentTime;
+
+    const bufferSize = ctx.sampleRate * 1.5;
+    const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+    const data = buffer.getChannelData(0);
+    for (let i = 0; i < bufferSize; i++) {
+      data[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / bufferSize, 1.8);
+    }
+    const source = ctx.createBufferSource();
+    source.buffer = buffer;
+
+    const filter = ctx.createBiquadFilter();
+    filter.type = 'lowpass';
+    filter.frequency.setValueAtTime(1000, t);
+    filter.frequency.exponentialRampToValueAtTime(80, t + 1.2);
+
+    const gain = ctx.createGain();
+    gain.gain.setValueAtTime(0.45, t);
+    gain.gain.exponentialRampToValueAtTime(0.001, t + 1.4);
+
+    source.connect(filter);
+    filter.connect(gain);
+    gain.connect(ctx.destination);
+    source.start(t);
+
+    const osc = ctx.createOscillator();
+    const oscGain = ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(140, t);
+    osc.frequency.exponentialRampToValueAtTime(25, t + 0.8);
+    oscGain.gain.setValueAtTime(0.5, t);
+    oscGain.gain.exponentialRampToValueAtTime(0.001, t + 0.9);
+    osc.connect(oscGain);
+    oscGain.connect(ctx.destination);
+    osc.start(t);
+  }
+
+  startBgm() {
+    if (!this.ctx || this.bgmPlaying) return;
+    this.bgmPlaying = true;
+    this.bgmStep = 0;
+
+    const scale = [110, 130.81, 164.81, 196.00, 220.00, 261.63, 329.63];
+    const bassScale = [55, 55, 65.41, 65.41, 49, 49, 58.27, 58.27];
+    const tempo = 128;
+    const stepTime = (60 / tempo) / 4;
+
+    this.bgmInterval = setInterval(() => {
+      if (!this.bgmPlaying || !this.ctx || this.muted) return;
+      const t = this.ctx.currentTime;
+
+      if (this.bgmStep % 4 === 0) {
+        const kickOsc = this.ctx.createOscillator();
+        const kickGain = this.ctx.createGain();
+        kickOsc.frequency.setValueAtTime(130, t);
+        kickOsc.frequency.exponentialRampToValueAtTime(32, t + 0.12);
+        kickGain.gain.setValueAtTime(0.35, t);
+        kickGain.gain.exponentialRampToValueAtTime(0.001, t + 0.13);
+        kickOsc.connect(kickGain);
+        kickGain.connect(this.bgmGain);
+        kickOsc.start(t);
+      }
+
+      if (this.bgmStep % 8 === 4) {
+        const snareNoise = this.ctx.createBufferSource();
+        const snareBuffer = this.ctx.createBuffer(1, this.ctx.sampleRate * 0.15, this.ctx.sampleRate);
+        const data = snareBuffer.getChannelData(0);
+        for (let i = 0; i < data.length; i++) data[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / data.length, 2);
+        snareNoise.buffer = snareBuffer;
+        const snareFilter = this.ctx.createBiquadFilter();
+        snareFilter.type = 'highpass';
+        snareFilter.frequency.value = 1200;
+        const snareGain = this.ctx.createGain();
+        snareGain.gain.setValueAtTime(0.18, t);
+        snareGain.gain.exponentialRampToValueAtTime(0.001, t + 0.14);
+        snareNoise.connect(snareFilter);
+        snareFilter.connect(snareGain);
+        snareGain.connect(this.bgmGain);
+        snareNoise.start(t);
+      } else if (this.bgmStep % 2 === 1) {
+        const hatNoise = this.ctx.createBufferSource();
+        const hatBuffer = this.ctx.createBuffer(1, this.ctx.sampleRate * 0.04, this.ctx.sampleRate);
+        const data = hatBuffer.getChannelData(0);
+        for (let i = 0; i < data.length; i++) data[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / data.length, 3);
+        hatNoise.buffer = hatBuffer;
+        const hatFilter = this.ctx.createBiquadFilter();
+        hatFilter.type = 'highpass';
+        hatFilter.frequency.value = 6000;
+        const hatGain = this.ctx.createGain();
+        hatGain.gain.setValueAtTime(0.08, t);
+        hatGain.gain.exponentialRampToValueAtTime(0.001, t + 0.035);
+        hatNoise.connect(hatFilter);
+        hatFilter.connect(hatGain);
+        hatGain.connect(this.bgmGain);
+        hatNoise.start(t);
+      }
+
+      const bassNote = bassScale[Math.floor(this.bgmStep / 4) % bassScale.length];
+      const bassOsc = this.ctx.createOscillator();
+      const bassFilter = this.ctx.createBiquadFilter();
+      const bassGain = this.ctx.createGain();
+      bassOsc.type = 'sawtooth';
+      bassOsc.frequency.value = bassNote;
+      bassFilter.type = 'lowpass';
+      bassFilter.frequency.setValueAtTime(450, t);
+      bassFilter.frequency.exponentialRampToValueAtTime(150, t + stepTime * 0.8);
+      bassGain.gain.setValueAtTime(0.15, t);
+      bassGain.gain.exponentialRampToValueAtTime(0.001, t + stepTime * 0.9);
+      bassOsc.connect(bassFilter);
+      bassFilter.connect(bassGain);
+      bassGain.connect(this.bgmGain);
+      bassOsc.start(t);
+
+      const leadNoteIndex = (this.bgmStep * 3 + (this.bgmStep % 5)) % scale.length;
+      const leadNote = scale[leadNoteIndex];
+      const leadOsc = this.ctx.createOscillator();
+      const leadGain = this.ctx.createGain();
+      leadOsc.type = 'sawtooth';
+      leadOsc.frequency.value = leadNote * 2;
+      leadGain.gain.setValueAtTime(0.06, t);
+      leadGain.gain.exponentialRampToValueAtTime(0.001, t + stepTime * 0.7);
+      leadOsc.connect(leadGain);
+      leadGain.connect(this.bgmGain);
+      leadOsc.start(t);
+
+      this.bgmStep = (this.bgmStep + 1) % 64;
+    }, stepTime * 1000);
+  }
+
+  stopBgm() {
+    this.bgmPlaying = false;
+    if (this.bgmInterval) {
+      clearInterval(this.bgmInterval);
+      this.bgmInterval = null;
+    }
+  }
+
+  toggleMute() {
+    this.muted = !this.muted;
+    if (this.bgmGain) this.bgmGain.gain.value = this.muted ? 0 : 0.16;
+    return this.muted;
+  }
+}
+
+/* -------------------------------------------------------------------------
+   7. FAILURE FX — fire, explosion, screen shake support
+   ------------------------------------------------------------------------- */
+class FireFX {
+  constructor(parent, texture) {
+    this.parent = parent;
+    this.count = 68;
+    this.active = false;
+    this.time = 0;
+    const positions = new Float32Array(this.count * 3);
+    const colors = new Float32Array(this.count * 3);
+    this.particles = [];
+    const rng = mulberry32(0x9911ab);
+    for (let i = 0; i < this.count; i++) {
+      const p = {
+        life: 0,
+        maxLife: 0.4 + rng() * 0.75,
+        x: 0, y: 0, z: 0,
+        vx: 0, vy: 0, vz: 0,
+        seed: rng()
+      };
+      this.particles.push(p);
+      positions[i * 3 + 1] = -99;
+      colors[i * 3] = 1;
+      colors[i * 3 + 1] = 0.55;
+      colors[i * 3 + 2] = 0.12;
+    }
+    this.positions = positions;
+    this.colors = colors;
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+    geo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+    const mat = new THREE.PointsMaterial({
+      map: texture,
+      size: 0.36,
+      transparent: true,
+      opacity: 0.86,
+      depthWrite: false,
+      blending: THREE.AdditiveBlending,
+      vertexColors: true,
+      sizeAttenuation: true
+    });
+    this.points = new THREE.Points(geo, mat);
+    this.points.frustumCulled = false;
+    this.points.visible = false;
+    parent.add(this.points);
+    this.light = new THREE.PointLight(0xff7a2f, 0, 7, 2);
+    this.light.position.set(0, 0.9, -1.55);
+    parent.add(this.light);
+    this._rng = rng;
+  }
+
+  start() {
+    if (this.active) return;
+    this.active = true;
+    this.time = 0;
+    this.points.visible = true;
+    const rng = this._rng;
+    for (const p of this.particles) {
+      p.life = 0;
+      p.maxLife = 0.35 + rng() * 0.8;
+      p.x = (rng() - 0.5) * 1.25;
+      p.y = 0.75 + rng() * 0.35;
+      p.z = -1.25 - rng() * 0.9;
+      p.vx = (rng() - 0.5) * 0.9;
+      p.vy = 1.2 + rng() * 2.4;
+      p.vz = (rng() - 0.5) * 0.8;
+    }
+    this.light.intensity = 4.5;
+  }
+
+  stop() {
+    this.active = false;
+    this.points.visible = false;
+    this.light.intensity = 0;
+  }
+
+  update(dt) {
+    if (!this.active) return;
+    this.time += dt;
+    const rng = this._rng;
+    const positions = this.positions;
+    const colors = this.colors;
+    for (let i = 0; i < this.count; i++) {
+      const p = this.particles[i];
+      p.life -= dt;
+      if (p.life <= 0) {
+        p.x = (rng() - 0.5) * 1.2;
+        p.y = 0.76 + rng() * 0.3;
+        p.z = -1.25 - rng() * 0.85;
+        p.vx = (rng() - 0.5) * 0.8;
+        p.vy = 1.5 + rng() * 2.6;
+        p.vz = (rng() - 0.5) * 0.7;
+        p.maxLife = 0.3 + rng() * 0.8;
+        p.life = p.maxLife;
+      }
+      p.x += p.vx * dt;
+      p.y += p.vy * dt;
+      p.z += p.vz * dt;
+      p.vy += 1.4 * dt;
+      const norm = clamp(p.life / p.maxLife, 0, 1);
+      positions[i * 3] = p.x;
+      positions[i * 3 + 1] = p.y;
+      positions[i * 3 + 2] = p.z;
+      colors[i * 3] = 1;
+      colors[i * 3 + 1] = 0.25 + norm * 0.62;
+      colors[i * 3 + 2] = 0.03 + norm * 0.19;
+    }
+    this.points.geometry.attributes.position.needsUpdate = true;
+    this.points.geometry.attributes.color.needsUpdate = true;
+    this.light.intensity = 3.5 + Math.sin(this.time * 27) * 1.5 + Math.sin(this.time * 51) * 0.8;
+    this.light.color.setHSL(0.065 + Math.sin(this.time * 3.4) * 0.01, 1, 0.55);
+  }
+}
+
+class ExplosionFX {
+  constructor(scene, texture) {
+    this.scene = scene;
+    this.group = new THREE.Group();
+    scene.add(this.group);
+    this.active = false;
+    this.time = 0;
+    this.core = new THREE.Sprite(new THREE.SpriteMaterial({
+      map: texture,
+      color: 0xffb45b,
+      transparent: true,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false,
+      toneMapped: false
+    }));
+    this.core.scale.set(1, 1, 1);
+    this.group.add(this.core);
+    this.flash = new THREE.Sprite(new THREE.SpriteMaterial({
+      map: texture,
+      color: 0xfff4ca,
+      transparent: true,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false,
+      toneMapped: false
+    }));
+    this.flash.scale.set(1, 1, 1);
+    this.group.add(this.flash);
+    this.light = new THREE.PointLight(0xff8f42, 0, 45, 2);
+    this.group.add(this.light);
+    this.group.visible = false;
+  }
+
+  start(position) {
+    this.active = true;
+    this.time = 0;
+    this.group.position.copy(position);
+    this.group.position.y += 0.9;
+    this.group.visible = true;
+    this.core.material.opacity = 1;
+    this.flash.material.opacity = 1;
+    this.core.scale.set(1, 1, 1);
+    this.flash.scale.set(2, 2, 1);
+    this.light.intensity = 110;
+    this.light.distance = 55;
+  }
+
+  update(dt) {
+    if (!this.active) return;
+    this.time += dt;
+    const t = this.time;
+    const burst = clamp(t / 0.55, 0, 1);
+    this.core.scale.setScalar(1 + burst * 19);
+    this.flash.scale.set(2 + burst * 14, 2 + burst * 14, 1);
+    this.core.material.opacity = clamp(1 - t / 0.9, 0, 1);
+    this.flash.material.opacity = clamp(1 - t / 0.25, 0, 1);
+    this.light.intensity = Math.max(0, 110 * Math.pow(1 - t / 0.85, 2));
+    if (t > 1.4) {
+      this.active = false;
+      this.group.visible = false;
+    }
+  }
+}
+
+class CountdownDisplay {
+  constructor(carRoot) {
+    this.canvas = makeCanvas(512, 512);
+    this.ctx = this.canvas.getContext('2d');
+    this.texture = new THREE.CanvasTexture(this.canvas);
+    this.texture.colorSpace = THREE.SRGBColorSpace;
+    this.material = new THREE.SpriteMaterial({
+      map: this.texture,
+      transparent: true,
+      depthWrite: false,
+      depthTest: false,
+      toneMapped: false
+    });
+    this.sprite = new THREE.Sprite(this.material);
+    this.sprite.position.set(0, 2.55, -8.3);
+    this.sprite.scale.set(3.1, 3.1, 1);
+    this.sprite.visible = false;
+    carRoot.add(this.sprite);
+    this.visibleTime = 0;
+    this.goHideAt = 0;
+    this.lastKey = '';
+  }
+
+  draw(label, sublabel = 'BERSIAP', color = '#ffd166') {
+    const ctx = this.ctx;
+    ctx.clearRect(0, 0, 512, 512);
+    const bg = ctx.createRadialGradient(256, 256, 18, 256, 256, 236);
+    bg.addColorStop(0, 'rgba(4,17,29,.94)');
+    bg.addColorStop(0.62, 'rgba(3,14,25,.82)');
+    bg.addColorStop(1, 'rgba(3,11,20,0)');
+    ctx.fillStyle = bg;
+    ctx.beginPath();
+    ctx.arc(256, 256, 242, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.strokeStyle = 'rgba(115,230,255,.45)';
+    ctx.lineWidth = 5;
+    ctx.beginPath();
+    ctx.arc(256, 256, 204, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.strokeStyle = 'rgba(255,209,102,.5)';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(256, 256, 186, -Math.PI * 0.5, Math.PI);
+    ctx.stroke();
+    for (let i = 0; i < 16; i++) {
+      const a = (i / 16) * Math.PI * 2;
+      ctx.fillStyle = i % 4 === 0 ? 'rgba(255,209,102,.7)' : 'rgba(151,208,227,.35)';
+      ctx.beginPath();
+      ctx.arc(256 + Math.cos(a) * 214, 256 + Math.sin(a) * 214, i % 4 === 0 ? 3 : 1.6, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillStyle = color;
+    ctx.shadowColor = color;
+    ctx.shadowBlur = 34;
+    ctx.font = label.length > 2 ? '800 176px Bahnschrift, Arial Narrow, Arial, sans-serif' : '800 250px Bahnschrift, Arial Narrow, Arial, sans-serif';
+    ctx.fillText(label, 256, 250);
+    ctx.shadowBlur = 0;
+    ctx.fillStyle = 'rgba(220,246,255,.8)';
+    ctx.font = '700 25px Bahnschrift, Arial, sans-serif';
+    ctx.fillText(sublabel, 256, 394);
+    this.texture.needsUpdate = true;
+  }
+
+  showNumber(n) {
+    const key = `n-${n}`;
+    if (key === this.lastKey) return;
+    this.lastKey = key;
+    this.draw(String(n), 'SIAP');
+    this.sprite.visible = true;
+    this.visibleTime = 0;
+    this.goHideAt = 0;
+  }
+
+  showGo() {
+    this.lastKey = 'go';
+    this.draw('GO!', 'TANCAP GAS', '#7ff0c1');
+    this.sprite.visible = true;
+    this.visibleTime = 0;
+    this.goHideAt = 0.85;
+  }
+
+  hide() {
+    this.sprite.visible = false;
+    this.lastKey = '';
+  }
+
+  update(dt) {
+    if (!this.sprite.visible) return;
+    this.visibleTime += dt;
+    const pulse = 1 + Math.sin(this.visibleTime * 12) * 0.035;
+    this.sprite.scale.setScalar(3.1 * pulse);
+    this.material.opacity = clamp(1 - Math.max(0, this.visibleTime - 0.6) * 1.1, 0.2, 1);
+    if (this.goHideAt > 0 && this.visibleTime > this.goHideAt) this.hide();
+  }
+}
+
+class HostNetwork {
+  constructor(handlers = {}) {
+    this.handlers = handlers;
+    this.roomCode = makeRoomCode();
+    this.hostRole = 'driver'; // Auto default P1 to driver, P2 to navigator
+    this.phase = PHASE.LOBBY;
+    this.slots = { p1: null, p2: null };
+    this.records = new Map();   // DataConnection -> record
+    this.pending = new Map();   // DataConnection -> metadata
+    this.peer = null;
+    this.status = 'starting';
+    this.statusDetail = 'Menyiapkan PeerJS...';
+    this.lastError = '';
+    this.trackPayload = null;
+    this.destroyed = false;
+    this.idRetries = 0;
+    this.reconnectTimer = 0;
+    this.startTime = performance.now();
+    this.roomCode = this.makeUniqueRoomCode();
+  }
+
+  makeUniqueRoomCode() {
+    return makeRoomCode(5);
+  }
+
+  emitLobby() {
+    if (this.handlers && this.handlers.onLobbyChange) this.handlers.onLobbyChange();
+  }
+
+  init() {
+    this.emitLobby();
+    if (typeof window.Peer === 'undefined') {
+      this.status = 'error';
+      this.statusDetail = 'PeerJS gagal dimuat dari CDN.';
+      this.lastError = 'Pustaka PeerJS tidak tersedia. Periksa koneksi internet lalu muat ulang.';
+      this.emitLobby();
+      return;
+    }
+    this.openPeer();
+  }
+
+  openPeer() {
+    if (this.destroyed) return;
+    try {
+      this.status = 'starting';
+      this.statusDetail = 'Menyambung ke server PeerJS...';
+      this.emitLobby();
+      this.peer = new Peer(CONFIG.PEER_PREFIX + this.roomCode, { debug: 1 });
+    } catch (error) {
+      this.status = 'error';
+      this.statusDetail = 'PeerJS tidak dapat dimulai.';
+      this.lastError = String(error && error.message ? error.message : error);
+      this.emitLobby();
+      return;
+    }
+
+    this.peer.on('open', () => {
+      this.status = 'ready';
+      this.statusDetail = 'Room siap — scan QR.';
+      this.lastError = '';
+      this.emitLobby();
+      this.broadcastLobby();
+    });
+
+    this.peer.on('connection', (conn) => this.handleIncoming(conn));
+
+    this.peer.on('disconnected', () => {
+      if (this.destroyed) return;
+      this.status = 'reconnecting';
+      this.statusDetail = 'Koneksi server terputus, mencoba lagi...';
+      this.emitLobby();
+      clearTimeout(this.reconnectTimer);
+      this.reconnectTimer = window.setTimeout(() => {
+        if (this.destroyed) return;
+        try {
+          if (this.peer && !this.peer.destroyed) this.peer.reconnect();
+        } catch {/* PeerJS may already be reconnecting */}
+      }, 1600);
+    });
+
+    this.peer.on('close', () => {
+      if (this.destroyed) return;
+      this.status = 'error';
+      this.statusDetail = 'Koneksi PeerJS ditutup.';
+      this.emitLobby();
+    });
+
+    this.peer.on('error', (error) => {
+      const type = error && error.type ? error.type : 'unknown';
+      if (type === 'unavailable-id') {
+        this.handleIdCollision();
+        return;
+      }
+      if (type === 'peer-unavailable') return;
+      if (type === 'network' || type === 'server-error' || type === 'socket-error' || type === 'socket-closed') {
+        this.status = 'reconnecting';
+        this.statusDetail = 'Server PeerJS sedang sibuk. Coba tunggu sebentar.';
+        this.lastError = String(error.message || error);
+        this.emitLobby();
+        return;
+      }
+      this.status = 'error';
+      this.statusDetail = 'Terjadi masalah koneksi.';
+      this.lastError = String(error.message || error || 'PeerJS error');
+      this.emitLobby();
+    });
+  }
+
+  handleIdCollision() {
+    if (this.idRetries >= 4) {
+      this.status = 'error';
+      this.statusDetail = 'Gagal mendapatkan ID room unik.';
+      this.lastError = 'Server PeerJS terus menolak ID room. Muat ulang halaman.';
+      this.emitLobby();
+      return;
+    }
+    this.idRetries++;
+    try { if (this.peer) this.peer.destroy(); } catch {/* noop */}
+    this.peer = null;
+    this.roomCode = makeUniqueRoomCode();
+    this.slots = { p1: null, p2: null };
+    this.records.clear();
+    this.hostRole = null;
+    this.status = 'starting';
+    this.statusDetail = 'ID room sudah dipakai, membuat room baru...';
+    this.emitLobby();
+    window.setTimeout(() => this.openPeer(), 500 + this.idRetries * 350);
+  }
+
+  handleIncoming(conn) {
+    if (this.destroyed) {
+      try { conn.close(); } catch {/* noop */}
+      return;
+    }
+    const meta = {
+      conn,
+      accepted: false,
+      slot: null,
+      connectedAt: performance.now(),
+      timer: null
+    };
+    this.pending.set(conn, meta);
+    meta.timer = window.setTimeout(() => {
+      if (!meta.accepted) {
+        this.rejectConnection(conn, 'Handshake timeout.');
+        this.pending.delete(conn);
+        try { conn.close(); } catch {/* noop */}
+      }
+    }, 12000);
+
+    conn.on('data', (raw) => this.handleData(conn, raw, meta));
+    conn.on('close', () => this.handleClose(conn));
+    conn.on('error', () => this.handleClose(conn));
+  }
+
+  handleData(conn, raw, meta) {
+    const msg = safeJsonParse(raw);
+    if (!msg || typeof msg.type !== 'string') return;
+    if (msg.type === 'ping') {
+      try { conn.send({ type: 'pong', t: msg.t }); } catch {/* noop */}
+      return;
+    }
+    if (!meta.accepted) {
+      if (msg.type === 'hello') this.acceptConnection(conn, meta, msg);
+      return;
+    }
+
+    const record = meta;
+    switch (msg.type) {
+      case 'setRole': {
+        if (record.slot !== 'p1') {
+          this.notify(record, 'Hanya Player 1 yang memilih peran.');
+          return;
+        }
+        if (this.phase !== PHASE.LOBBY) {
+          this.notify(record, 'Peran sudah dikunci saat game berjalan.');
+          return;
+        }
+        if (msg.role !== 'driver' && msg.role !== 'navigator') return;
+        this.hostRole = msg.role;
+        this.broadcastLobby();
+        this.handlers.onLobbyChange && this.handlers.onLobbyChange();
+        break;
+      }
+      case 'setTrackLength': {
+        if (record.slot !== 'p1') return;
+        const len = Number(msg.length);
+        if ([1000, 3000, 5000].includes(len)) {
+          this.handlers.onTrackLengthChanged && this.handlers.onTrackLengthChanged(len);
+          this.broadcastLobby();
+        }
+        break;
+      }
+      case 'start': {
+        if (record.slot !== 'p1') {
+          this.notify(record, 'Hanya Player 1 (Host) yang bisa memulai.');
+          return;
+        }
+        if (msg.length && [1000, 3000, 5000].includes(Number(msg.length))) {
+          this.handlers.onTrackLengthChanged && this.handlers.onTrackLengthChanged(Number(msg.length));
+        }
+        if (!this.canStart()) {
+          this.notify(record, this.startBlockerMessage());
+          return;
+        }
+        this.handlers.onStartRequested && this.handlers.onStartRequested();
+        break;
+      }
+      case 'retry': {
+        if (record.slot !== 'p1') {
+          this.notify(record, 'Hanya Player 1 yang bisa mengulang.');
+          return;
+        }
+        if (this.phase !== PHASE.GAMEOVER && this.phase !== PHASE.WIN) {
+          return;
+        }
+        this.handlers.onRetryRequested && this.handlers.onRetryRequested();
+        break;
+      }
+      case 'input': {
+        const role = this.roleForSlot(record.slot);
+        if (role !== 'driver') return;
+        if (this.phase !== PHASE.COUNTDOWN && this.phase !== PHASE.PLAYING) return;
+        const steer = clamp(Math.round(Number(msg.steer) || 0), -1, 1);
+        const brake = Boolean(msg.brake);
+        this.handlers.onInput && this.handlers.onInput({
+          steer,
+          brake,
+          at: performance.now(),
+          slot: record.slot
+        });
+        break;
+      }
+      case 'leave':
+        try { conn.close(); } catch {/* noop */}
+        break;
+      default:
+        break;
+    }
+  }
+
+  acceptConnection(conn, meta, hello) {
+    if (meta.accepted) return;
+    const hasCap = this.phase === PHASE.LOBBY;
+    if (!hasCap) {
+      this.rejectConnection(conn, 'Game sedang berjalan. Coba lagi setelah game selesai / muat ulang room.');
+      window.setTimeout(() => { try { conn.close(); } catch {/* noop */} }, 600);
+      this.pending.delete(conn);
+      return;
+    }
+    let slot = !this.slots.p1 ? 'p1' : (!this.slots.p2 ? 'p2' : null);
+    if (!slot) {
+      this.rejectConnection(conn, 'Room penuh. Maksimal 2 pemain.');
+      window.setTimeout(() => { try { conn.close(); } catch {/* noop */} }, 600);
+      this.pending.delete(conn);
+      return;
+    }
+    window.clearTimeout(meta.timer);
+    meta.accepted = true;
+    meta.slot = slot;
+    this.records.set(conn, meta);
+    this.pending.delete(conn);
+    this.slots[slot] = meta;
+    this.sendWelcome(meta);
+    this.broadcastLobby();
+    this.handlers.onPlayersChanged && this.handlers.onPlayersChanged({ slot, role: this.roleForSlot(slot), connected: true });
+    this.handlers.onLobbyChange && this.handlers.onLobbyChange();
+  }
+
+  sendWelcome(record) {
+    this.send(record, {
+      type: 'welcome',
+      version: 1,
+      room: this.roomCode,
+      slot: record.slot,
+      isHost: record.slot === 'p1',
+      role: this.roleForSlot(record.slot),
+      hostRole: this.hostRole,
+      phase: this.phase,
+      canStart: this.canStart(),
+      players: this.publicPlayers(),
+      roles: this.publicRoles()
+    });
+  }
+
+  broadcastLobby() {
+    if (this.phase !== PHASE.LOBBY) return;
+    this.emitLobby();
+    const players = this.publicPlayers();
+    const roles = this.publicRoles();
+    for (const record of this.records.values()) {
+      this.send(record, {
+        type: 'lobby',
+        phase: this.phase,
+        room: this.roomCode,
+        hostRole: this.hostRole,
+        canStart: this.canStart(),
+        players,
+        roles,
+        you: { slot: record.slot, isHost: record.slot === 'p1' },
+        role: this.roleForSlot(record.slot)
+      });
+    }
+  }
+
+  broadcastState(phase, extra = {}) {
+    this.phase = phase;
+    const packet = {
+      type: 'state',
+      phase,
+      room: this.roomCode,
+      roles: this.publicRoles(),
+      players: this.publicPlayers(),
+      ...extra
+    };
+    this.broadcast(packet);
+  }
+
+  sendTrack(track) {
+    this.trackPayload = null;
+    const points = [];
+    const step = track.length >= 3000 ? 10 : (track.length >= 1500 ? 6 : 2);
+    for (let i = 0; i < track.samples.length; i += step) {
+      const s = track.samples[i];
+      points.push([round1(s.x), round1(s.z)]);
+    }
+    const last = track.samples[track.samples.length - 1];
+    points.push([round1(last.x), round1(last.z)]);
+    this.trackPayload = {
+      type: 'track',
+      length: track.length,
+      step,
+      points,
+      bounds: {
+        minX: round1(track.bounds.minX),
+        maxX: round1(track.bounds.maxX),
+        minZ: round1(track.bounds.minZ),
+        maxZ: round1(track.bounds.maxZ)
+      },
+      turns: track.turns.map((t) => ({
+        d0: round1(t.d0),
+        d1: round1(t.d1),
+        dir: t.dir,
+        angle: t.angle
+      }))
+    };
+    this.broadcast(this.trackPayload);
+  }
+
+  broadcastTelemetry(data) {
+    if (this.records.size === 0) return;
+    this.broadcast({ type: 'telemetry', ...data });
+  }
+
+  broadcast(payload) {
+    for (const record of this.records.values()) this.send(record, payload);
+  }
+
+  send(record, payload) {
+    if (!record || !record.conn) return;
+    try {
+      if (record.conn.open) record.conn.send(payload);
+    } catch {/* connection might have just dropped */}
+  }
+
+  notify(record, message) {
+    this.send(record, { type: 'notice', message });
+  }
+
+  rejectConnection(conn, reason) {
+    const sendRejection = () => {
+      try { conn.send({ type: 'rejected', reason }); } catch {/* noop */}
+    };
+    try {
+      if (conn.open) sendRejection();
+      else conn.on('open', sendRejection);
+    } catch {/* noop */}
+  }
+
+  handleClose(conn) {
+    const pendingMeta = this.pending.get(conn);
+    if (pendingMeta) {
+      window.clearTimeout(pendingMeta.timer);
+      this.pending.delete(conn);
+      return;
+    }
+    const record = this.records.get(conn);
+    if (!record) return;
+    this.records.delete(conn);
+    const slot = record.slot;
+    const role = this.roleForSlot(slot);
+    if (this.slots[slot] === record) this.slots[slot] = null;
+    if (this.phase === PHASE.LOBBY) {
+      if (slot === 'p1') this.hostRole = null;
+      this.broadcastLobby();
+    }
+    this.handlers.onPlayersChanged && this.handlers.onPlayersChanged({ slot, role, connected: false });
+    this.handlers.onLobbyChange && this.handlers.onLobbyChange();
+    if (this.phase !== PHASE.LOBBY) {
+      this.handlers.onControllerLost && this.handlers.onControllerLost({ slot, role });
+    }
+  }
+
+  roleForSlot(slot) {
+    if (!this.hostRole) return null;
+    if (slot === 'p1') return this.hostRole;
+    if (slot === 'p2') return this.hostRole === 'driver' ? 'navigator' : 'driver';
+    return null;
+  }
+
+  publicRoles() {
+    return {
+      p1: this.roleForSlot('p1'),
+      p2: this.roleForSlot('p2')
+    };
+  }
+
+  publicPlayers() {
+    return {
+      p1: { connected: Boolean(this.slots.p1), role: this.roleForSlot('p1') },
+      p2: { connected: Boolean(this.slots.p2), role: this.roleForSlot('p2') }
+    };
+  }
+
+  canStart() {
+    return this.phase === PHASE.LOBBY &&
+      Boolean(this.slots.p1) &&
+      Boolean(this.hostRole) &&
+      (Boolean(this.slots.p2) || this.hostRole === 'driver');
+  }
+
+  startBlockerMessage() {
+    if (!this.slots.p1) return 'Player 1 belum terhubung.';
+    if (!this.hostRole) return 'Pilih peran Driver atau Navigator terlebih dahulu.';
+    if (!this.slots.p2 && this.hostRole === 'navigator') return 'Butuh Player 2 sebagai Driver untuk memulai.';
+    return 'Game belum siap dimulai.';
+  }
+
+  setPhase(phase) {
+    this.phase = phase;
+    if (phase === PHASE.LOBBY) this.broadcastLobby();
+  }
+
+  getRoomCode() {
+    return this.roomCode;
+  }
+
+  getHostRole() {
+    return this.hostRole;
+  }
+
+  getRoles() {
+    return this.publicRoles();
+  }
+
+  getPlayerCount() {
+    return (this.slots.p1 ? 1 : 0) + (this.slots.p2 ? 1 : 0);
+  }
+
+  getDriverSlot() {
+    if (this.roleForSlot('p1') === 'driver' && this.slots.p1) return 'p1';
+    if (this.roleForSlot('p2') === 'driver' && this.slots.p2) return 'p2';
+    return null;
+  }
+
+  getStatus() {
+    return {
+      status: this.status,
+      detail: this.statusDetail,
+      error: this.lastError,
+      ready: this.status === 'ready',
+      connected: this.getPlayerCount()
+    };
+  }
+
+  getControllerBaseUrl() {
+    const params = new URLSearchParams(location.search);
+    const queryBase = params.get('controller');
+    let stored = null;
+    try { stored = localStorage.getItem('fgdn.controllerBase'); } catch {/* storage blocked */}
+    let base = queryBase || stored;
+    if (!base) {
+      if (isLocalHosting()) {
+        base = new URL('controller.html', location.href).href;
+      } else {
+        base = CONFIG.CONTROLLER_URL;
+      }
+    }
+    return base;
+  }
+
+  getControllerUrl() {
+    let url;
+    try {
+      url = new URL(this.getControllerBaseUrl());
+    } catch {
+      url = new URL(CONFIG.CONTROLLER_URL);
+    }
+    url.searchParams.set('room', this.roomCode);
+    return url.href;
+  }
+
+  isControllerUrlPlaceholder() {
+    return this.getControllerBaseUrl().includes('YOUR_GITHUB_USERNAME');
+  }
+
+}
+
+/* -------------------------------------------------------------------------
+   8. HUD / LOBBY UI
+   ------------------------------------------------------------------------- */
+class GameUI {
+  constructor(game) {
+    this.game = game;
+    this.el = {
+      menu: document.getElementById('menu'),
+      hud: document.getElementById('hud'),
+      gameover: document.getElementById('gameover'),
+      win: document.getElementById('win'),
+      loading: document.getElementById('loading'),
+      loaderStatus: document.getElementById('loader-status'),
+      qrcode: document.getElementById('qrcode'),
+      roomCode: document.getElementById('room-code'),
+      networkStatus: document.getElementById('network-status'),
+      netHint: document.getElementById('net-hint'),
+      controllerLink: document.getElementById('controller-link'),
+      copyLink: document.getElementById('copy-link'),
+      soloBtn: document.getElementById('solo-btn'),
+      playerRows: {
+        p1: document.querySelector('.player-row[data-slot="p1"]'),
+        p2: document.querySelector('.player-row[data-slot="p2"]')
+      },
+      controllerUrlInput: document.getElementById('controller-url-input'),
+      saveUrl: document.getElementById('save-url'),
+      urlWarning: document.getElementById('url-warning'),
+      urlSetting: document.getElementById('url-setting'),
+      seedValue: document.getElementById('seed-value'),
+      speedValue: document.getElementById('speed-value'),
+      speedFill: document.getElementById('speed-fill'),
+      progressValue: document.getElementById('progress-value'),
+      progressFill: document.getElementById('progress-fill'),
+      timerValue: document.getElementById('timer-value'),
+      brandDistanceLabel: document.getElementById('brand-distance-label'),
+      maxDistanceLabel: document.getElementById('max-distance-label'),
+      pillDistance: document.getElementById('pill-distance'),
+      audioBtn: document.getElementById('audio-btn'),
+      distGroup: document.getElementById('dist-group'),
+      warnHud: document.getElementById('warn-hud'),
+      warnCount: document.getElementById('warn-count'),
+      edgeWarn: document.getElementById('edge-warn'),
+      coopLabel: document.getElementById('coop-label'),
+      driveHint: document.getElementById('drive-hint'),
+      speedFx: document.getElementById('speed-fx'),
+      explosionFlash: document.getElementById('explosion-flash'),
+      gameoverReason: document.getElementById('gameover-reason'),
+      gameoverDistance: document.getElementById('gameover-distance'),
+      gameoverTime: document.getElementById('gameover-time'),
+      winTime: document.getElementById('win-time'),
+      winSpeed: document.getElementById('win-speed'),
+      retryBtn: document.getElementById('retry-btn'),
+      winRetryBtn: document.getElementById('win-retry-btn'),
+      toast: document.getElementById('toast')
+    };
+    this.network = null;
+    this.lastQR = '';
+    this.lastUrl = '';
+    this.toastTimer = 0;
+    this.bound = false;
+    this.bindLocalUI();
+  }
+
+  bindLocalUI() {
+    if (this.bound) return;
+    this.bound = true;
+    this.el.soloBtn.addEventListener('click', () => {
+      if (this.network && this.network.getPlayerCount() > 0) {
+        this.toast('Putuskan koneksi HP dulu untuk bermain solo.');
+        return;
+      }
+      this.game.startSolo();
+    });
+    this.el.retryBtn.addEventListener('click', () => this.game.retry());
+    this.el.winRetryBtn.addEventListener('click', () => this.game.retry());
+    this.el.copyLink.addEventListener('click', () => this.copyControllerLink());
+    this.el.controllerLink.addEventListener('click', (event) => {
+      if (!this.el.controllerLink.href || this.el.controllerLink.href.endsWith('#')) event.preventDefault();
+    });
+    this.el.saveUrl.addEventListener('click', () => this.saveControllerUrl());
+    this.el.controllerUrlInput.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter') {
+        event.preventDefault();
+        this.saveControllerUrl();
+      }
+    });
+
+    if (this.el.audioBtn) {
+      this.el.audioBtn.addEventListener('click', () => {
+        const muted = this.game.sound.toggleMute();
+        this.el.audioBtn.textContent = muted ? '🔇' : '🔊';
+      });
+    }
+
+    if (this.el.distGroup) {
+      const distBtns = this.el.distGroup.querySelectorAll('.dist-btn');
+      distBtns.forEach((btn) => {
+        btn.addEventListener('click', () => {
+          const len = Number(btn.dataset.dist) || 1000;
+          this.game.targetLength = len;
+          distBtns.forEach(b => b.classList.toggle('active', Number(b.dataset.dist) === len));
+          if (this.el.pillDistance) this.el.pillDistance.textContent = String(len);
+          if (this.el.maxDistanceLabel) this.el.maxDistanceLabel.textContent = String(len);
+          if (this.el.brandDistanceLabel) this.el.brandDistanceLabel.textContent = `${len / 1000} KM`;
+          if (this.network) {
+            this.network.handlers.onTrackLengthChanged && this.network.handlers.onTrackLengthChanged(len);
+          }
+        });
+      });
+    }
+  }
+
+  attachNetwork(network) {
+    this.network = network;
+    const input = this.el.controllerUrlInput;
+    if (input && document.activeElement !== input) {
+      input.value = network.getControllerBaseUrl();
+    }
+    this.syncLobby();
+  }
+
+  setSeed(seed) {
+    this.el.seedValue.textContent = Number(seed).toString(16).toUpperCase().padStart(8, '0');
+  }
+
+  hideLoading() {
+    this.el.loading.classList.add('done');
+    if (window.__FGDN_LOAD_WATCHDOG__) clearTimeout(window.__FGDN_LOAD_WATCHDOG__);
+  }
+
+  setLoaderStatus(text, isError = false) {
+    this.el.loaderStatus.textContent = text;
+    this.el.loaderStatus.classList.toggle('load-error', isError);
+    if (isError) this.el.loading.dataset.error = '1';
+  }
+
+  syncLobby() {
+    if (!this.network) return;
+    const status = this.network.getStatus();
+    const room = this.network.getRoomCode();
+    const url = this.network.getControllerUrl();
+    const players = this.network.publicPlayers();
+    const roles = this.network.publicRoles();
+    const hostRole = this.network.getHostRole();
+    const phase = this.network.phase;
+
+    this.el.roomCode.textContent = room;
+    this.el.seedValue.textContent = Number(this.game.track.seed).toString(16).toUpperCase().padStart(8, '0');
+
+    const pill = this.el.networkStatus;
+    const pillLabel = pill.querySelector('span');
+    pill.classList.remove('ready', 'warn', 'error');
+    if (status.status === 'ready') {
+      pill.classList.add('ready');
+      pillLabel.textContent = status.connected > 0 ? `${status.connected}/2 TERHUBUNG` : 'ROOM SIAP';
+    } else if (status.status === 'starting' || status.status === 'reconnecting') {
+      pill.classList.add('warn');
+      pillLabel.textContent = status.status === 'reconnecting' ? 'RECONNECT' : 'MENYIAPKAN';
+    } else if (status.status === 'error') {
+      pill.classList.add('error');
+      pillLabel.textContent = 'ERROR';
+    } else {
+      pillLabel.textContent = 'OFFLINE';
+    }
+
+    this.el.controllerLink.textContent = url;
+    this.el.controllerLink.href = url;
+    this.el.controllerLink.title = url;
+
+    if (this.el.controllerUrlInput && document.activeElement !== this.el.controllerUrlInput) {
+      this.el.controllerUrlInput.value = this.network.getControllerBaseUrl();
+    }
+    this.el.urlWarning.classList.toggle('show', this.network.isControllerUrlPlaceholder());
+
+    this.updatePlayerRow('p1', players.p1, roles.p1, hostRole);
+    this.updatePlayerRow('p2', players.p2, roles.p2, hostRole);
+
+    let hint = 'Menyiapkan room PeerJS...';
+    if (status.status === 'error') {
+      hint = status.error || status.detail || 'PeerJS gagal dimulai.';
+    } else if (status.status === 'starting') {
+      hint = 'Menyambung ke server PeerJS publik...';
+    } else if (status.status === 'reconnecting') {
+      hint = 'Koneksi server terputus. Mencoba menyambung ulang...';
+    } else if (!players.p1.connected) {
+      hint = 'Scan QR dengan HP Player 1. P1 nanti memilih peran dan menjadi Host.';
+    } else if (!hostRole) {
+      hint = 'Player 1 memilih Driver atau Navigator di HP. Player 2 otomatis mendapat peran sisanya.';
+    } else if (!players.p2.connected && hostRole === 'navigator') {
+      hint = 'Player 1 memilih Navigator. Butuh Player 2 sebagai Driver untuk memulai.';
+    } else if (!players.p2.connected && hostRole === 'driver') {
+      hint = 'Player 1 siap sebagai Driver. Player 2 belum bergabung — P1 boleh mulai sendiri atau tunggu partner.';
+    } else if (hostRole) {
+      hint = 'Semua siap. Tekan MULAI GAME di HP Player 1.';
+    }
+    this.el.netHint.textContent = hint;
+
+    const connectedCount = (players.p1.connected ? 1 : 0) + (players.p2.connected ? 1 : 0);
+    this.el.soloBtn.disabled = connectedCount > 0 || phase !== PHASE.LOBBY;
+    this.el.soloBtn.title = connectedCount > 0 ? 'Putuskan koneksi HP untuk bermain solo' : 'Mulai tanpa HP';
+
+    if (this.lastQR !== url) {
+      this.lastQR = url;
+      this.renderQR(url);
+    }
+  }
+
+  updatePlayerRow(slot, player, role, hostRole) {
+    const row = this.el.playerRows[slot];
+    if (!row) return;
+    const state = row.querySelector('.player-state');
+    const chip = row.querySelector('.role-chip');
+    row.classList.toggle('online', Boolean(player.connected));
+    chip.classList.remove('driver', 'navigator');
+    if (!player.connected) {
+      if (slot === 'p1') {
+        state.textContent = 'Belum terhubung — scan QR';
+        chip.textContent = 'MENUNGGU';
+      } else {
+        state.textContent = hostRole ? 'Slot bebas — peran mengikuti P1' : 'Slot bebas';
+        chip.textContent = 'BELUM ADA';
+      }
+      return;
+    }
+    if (!role) {
+      state.textContent = slot === 'p1' ? 'Terhubung — memilih peran di HP' : 'Terhubung — menunggu P1 memilih';
+      chip.textContent = 'MENUNGGU';
+      return;
+    }
+    state.textContent = slot === 'p1'
+      ? 'Host • siap dari HP'
+      : `Peran otomatis • ${role === 'driver' ? 'siap mengemudi' : 'siap menavigasi'}`;
+    chip.textContent = role === 'driver' ? 'DRIVER' : 'NAVIGATOR';
+    chip.classList.add(role);
+  }
+
+  renderQR(url) {
+    const holder = this.el.qrcode;
+    if (!holder) return;
+    holder.innerHTML = '';
+    this.lastUrl = url;
+    if (typeof window.QRCode === 'undefined') {
+      const fallback = document.createElement('div');
+      fallback.className = 'qr-fallback';
+      fallback.textContent = 'QRCode.js gagal dimuat. Buka tautan controller di bawah.';
+      holder.appendChild(fallback);
+      return;
+    }
+    try {
+      new QRCode(holder, {
+        text: url,
+        width: 220,
+        height: 220,
+        colorDark: '#061421',
+        colorLight: '#f7fcff',
+        correctLevel: QRCode.CorrectLevel.M
+      });
+    } catch (error) {
+      const fallback = document.createElement('div');
+      fallback.className = 'qr-fallback';
+      fallback.textContent = 'Gagal membuat QR. Salin tautan controller di bawah.';
+      holder.appendChild(fallback);
+    }
+  }
+
+  async copyControllerLink() {
+    if (!this.network) return;
+    const url = this.network.getControllerUrl();
+    try {
+      if (navigator.clipboard && window.isSecureContext) {
+        await navigator.clipboard.writeText(url);
+      } else {
+        const area = document.createElement('textarea');
+        area.value = url;
+        area.style.position = 'fixed';
+        area.style.opacity = '0';
+        document.body.appendChild(area);
+        area.select();
+        document.execCommand('copy');
+        area.remove();
+      }
+      this.toast('Tautan controller disalin.');
+    } catch {
+      this.toast('Gagal menyalin. Tekan lama tautan untuk menyalin manual.');
+    }
+  }
+
+  saveControllerUrl() {
+    const input = this.el.controllerUrlInput;
+    let raw = input.value.trim();
+    if (!raw) {
+      this.toast('URL controller tidak boleh kosong.');
+      return;
+    }
+    if (!/^https?:\/\//i.test(raw)) {
+      this.toast('URL harus diawali http:// atau https://');
+      return;
+    }
+    try {
+      const parsed = new URL(raw);
+      if (!parsed.pathname.toLowerCase().endsWith('.html')) {
+        // Still allow a directory URL, but add controller.html as a convenience.
+        if (!parsed.pathname.endsWith('/')) parsed.pathname += '/';
+        parsed.pathname += 'controller.html';
+      }
+      raw = parsed.href;
+    } catch {
+      this.toast('Format URL tidak valid.');
+      return;
+    }
+    try {
+      localStorage.setItem('fgdn.controllerBase', raw);
+    } catch {/* localStorage unavailable */}
+    this.el.controllerUrlInput.value = raw;
+    this.lastQR = '';
+    this.syncLobby();
+    this.toast('URL controller disimpan. QR diperbarui.');
+  }
+
+  showPhase(phase) {
+    const inGame = phase !== PHASE.LOBBY;
+    this.el.menu.hidden = inGame;
+    this.el.hud.classList.toggle('visible', inGame && phase !== PHASE.LOBBY);
+    this.el.gameover.hidden = phase !== PHASE.GAMEOVER;
+    this.el.win.hidden = phase !== PHASE.WIN;
+    if (phase === PHASE.LOBBY) {
+      this.el.hud.classList.remove('visible');
+      this.el.speedFx.style.opacity = '0';
+    }
+    if (!inGame) {
+      this.syncLobby();
+    }
+  }
+
+  setInGame(mode, roles) {
+    this.el.menu.hidden = true;
+    this.el.gameover.hidden = true;
+    this.el.win.hidden = true;
+    this.el.hud.classList.add('visible');
+    this.el.speedFx.style.opacity = '0';
+    if (mode === 'coop' && roles) {
+      const p1 = roles.p1 ? this.roleName(roles.p1) : '—';
+      const p2 = roles.p2 ? this.roleName(roles.p2) : '—';
+      this.el.coopLabel.textContent = `P1 ${p1} · P2 ${p2}`;
+      this.el.driveHint.innerHTML = '<span style="color:#79e9ff">CO-OP</span> &nbsp; kemudi &amp; rem dari HP';
+    } else {
+      this.el.coopLabel.textContent = 'SOLO DRIVE';
+      this.el.driveHint.innerHTML = '<kbd>A</kbd> Kiri <span class="divider"></span> <kbd>D</kbd> Kanan <span class="divider"></span> <kbd>S</kbd> Rem';
+    }
+  }
+
+  setTrackLength(len) {
+    this.game.targetLength = len;
+    if (this.el.maxDistanceLabel) this.el.maxDistanceLabel.textContent = String(len);
+    if (this.el.brandDistanceLabel) this.el.brandDistanceLabel.textContent = `${len / 1000} KM`;
+    if (this.el.pillDistance) this.el.pillDistance.textContent = String(len);
+    const btns = this.el.menu.querySelectorAll('.dist-btn');
+    btns.forEach(btn => btn.classList.toggle('active', Number(btn.dataset.dist) === len));
+  }
+
+  roleName(role) {
+    return role === 'driver' ? 'DRIVER' : 'NAVIGATOR';
+  }
+
+  updateHUD(data) {
+    const maxLen = this.game.track ? this.game.track.length : (this.game.targetLength || 1000);
+    const speed = clamp(Math.round(data.speedKmh), 0, 999);
+    this.el.speedValue.textContent = String(speed);
+    this.el.speedFill.style.width = `${clamp(speed / CONFIG.MAX_KMH, 0, 1) * 100}%`;
+    this.el.progressValue.textContent = String(Math.round(clamp(data.progress, 0, maxLen)));
+    this.el.progressFill.style.width = `${clamp(data.progress / maxLen, 0, 1) * 100}%`;
+    if (this.el.maxDistanceLabel) this.el.maxDistanceLabel.textContent = String(maxLen);
+    if (this.el.brandDistanceLabel) this.el.brandDistanceLabel.textContent = `${maxLen / 1000} KM`;
+    this.el.timerValue.textContent = formatTime(data.elapsed || 0);
+    const warn = data.failureTimer > 0.25 && data.phase !== PHASE.EXPLODING;
+    this.el.warnHud.classList.toggle('visible', warn);
+    if (warn) {
+      this.el.warnCount.textContent = Math.max(0, CONFIG.STUCK_SECONDS - data.failureTimer).toFixed(1);
+    }
+    this.el.edgeWarn.classList.toggle('visible', Boolean(data.edgeWarning) && !warn);
+    const speedAlpha = clamp((speed - 80) / 120, 0, 1);
+    this.el.speedFx.style.opacity = String(speedAlpha * 0.78);
+  }
+
+  showGameOver(data) {
+    const maxLen = this.game.track ? this.game.track.length : 1000;
+    this.el.gameover.hidden = false;
+    this.el.win.hidden = true;
+    this.el.gameoverReason.textContent = data.reason || 'Kendaraan tidak dapat bergerak selama 5 detik.';
+    this.el.gameoverDistance.textContent = `${Math.round(clamp(data.progress || 0, 0, maxLen))} m`;
+    this.el.gameoverTime.textContent = formatTime(data.elapsed || 0);
+    this.el.hud.classList.remove('visible');
+    this.el.speedFx.style.opacity = '0';
+  }
+
+  showWin(data) {
+    this.el.win.hidden = false;
+    this.el.gameover.hidden = true;
+    this.el.winTime.textContent = formatTime(data.elapsed || 0);
+    this.el.winSpeed.textContent = `${Math.round(data.topSpeedKmh || 0)} km/j`;
+    this.el.hud.classList.remove('visible');
+    this.el.speedFx.style.opacity = '0';
+  }
+
+  hideEndScreens() {
+    this.el.gameover.hidden = true;
+    this.el.win.hidden = true;
+  }
+
+  flashExplosion() {
+    this.el.explosionFlash.classList.remove('fire');
+    void this.el.explosionFlash.offsetWidth;
+    this.el.explosionFlash.classList.add('fire');
+  }
+
+  toast(message) {
+    const el = this.el.toast;
+    if (!el) return;
+    el.textContent = message;
+    el.classList.add('show');
+    window.clearTimeout(this.toastTimer);
+    this.toastTimer = window.setTimeout(() => el.classList.remove('show'), 3200);
+  }
+}
+
+/* -------------------------------------------------------------------------
+   9. GAME
+   ------------------------------------------------------------------------- */
+class Game {
+  constructor() {
+    this.canvas = document.getElementById('scene');
+    this.scene = new THREE.Scene();
+    this.camera = new THREE.PerspectiveCamera(74, window.innerWidth / window.innerHeight, 0.035, 1400);
+    this.renderer = null;
+    this.track = null;
+    this.world = null;
+    this.cockpit = null;
+    this.network = null;
+    this.remoteInput = { steer: 0, brake: false, at: 0, slot: null };
+    this.keys = { left: false, right: false, brake: false };
+    this.phase = PHASE.LOBBY;
+    this.mode = 'solo';
+    this.roles = null;
+    this.time = 0;
+    this.lastFrame = 0;
+    this.lastHud = 0;
+    this.lastTelemetry = 0;
+    this.telemetryAccumulator = 0;
+    this.countdown = CONFIG.COUNTDOWN_SECONDS;
+    this.countdownInt = 5;
+    this.elapsed = 0;
+    this.speed = 0;
+    this.maxSpeed = 0;
+    this.heading = 0;
+    this.position = new THREE.Vector3(0, 0, 0);
+    this.speedKmh = 0;
+    this.progress = 0;
+    this.trackIndex = 0;
+    this.steerVisual = 0;
+    this.steerTarget = 0;
+    this.brake = false;
+    this.falling = false;
+    this.fallVel = 0;
+    this.fallY = 0;
+    this.fallDrift = 0;
+    this.fallPitch = 0;
+    this.fallRoll = 0;
+    this.fallYaw = 0;
+    this.fallPitchVel = 0;
+    this.fallRollVel = 0;
+    this.fallYawVel = 0;
+    this.centerLateral = 0;
+    this.cornersOnRoad = 4;
+    this.edgeWarning = false;
+    this.footprint = [];
+    this.failureTimer = 0;
+    this.failureCause = null;
+    this.fireActive = false;
+    this.exploded = false;
+    this.explodingTimer = 0;
+    this.revealTimer = 0;
+    this.endPayload = null;
+    this.cameraShake = 0;
+    this.targetLength = 1000;
+    this.sound = new SoundSystem();
+    this.ui = new GameUI(this);
+    this.boot();
+  }
+
+  boot() {
+    try {
+      this.renderer = new THREE.WebGLRenderer({
+        canvas: this.canvas,
+        antialias: true,
+        powerPreference: 'high-performance'
+      });
+      this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+      this.renderer.setSize(window.innerWidth, window.innerHeight);
+      this.renderer.outputColorSpace = THREE.SRGBColorSpace;
+      this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
+      this.renderer.toneMappingExposure = 1.03;
+    } catch (error) {
+      this.ui.setLoaderStatus('WebGL tidak tersedia. Coba Chrome / Edge terbaru dengan akselerasi grafis aktif.', true);
+      this.ui.setLoaderStatus(String(error.message || error), true);
+      throw error;
+    }
+
+    this.track = TrackGenerator.generate(randomSeed32(), this.targetLength);
+    this.world = new TrackWorld(this.track, this.scene, this.renderer);
+    this.ui.setSeed(this.track.seed);
+
+    this.carRoot = new THREE.Group();
+    this.carRoot.rotation.order = 'YXZ';
+    this.scene.add(this.carRoot);
+    this.cameraRig = new THREE.Group();
+    this.cameraRig.position.copy(new THREE.Vector3(-0.37, 1.285, -0.02));
+    this.carRoot.add(this.cameraRig);
+    this.cameraRig.add(this.camera);
+    this.camera.position.set(0, 0, 0);
+    this.camera.rotation.set(0, 0, 0);
+
+    this.cockpit = new Cockpit(this.carRoot, this.renderer);
+    this.countdownDisplay = new CountdownDisplay(this.carRoot);
+    this.fireFX = new FireFX(this.carRoot, this.world.fireTexture);
+    this.explosionFX = new ExplosionFX(this.scene, this.world.fireTexture);
+    this.cockpit.setTabletVisible(false);
+
+    this.network = new HostNetwork({
+      onLobbyChange: () => this.ui.syncLobby(),
+      onPlayersChanged: (info) => this.onPlayersChanged(info),
+      onTrackLengthChanged: (len) => {
+        this.targetLength = len;
+        this.ui.setTrackLength && this.ui.setTrackLength(len);
+      },
+      getTargetLength: () => this.targetLength,
+      onStartRequested: () => this.startCoop(),
+      onRetryRequested: () => this.retry(),
+      onInput: (input) => {
+        this.remoteInput = { ...input, at: performance.now() };
+      },
+      onControllerLost: (info) => this.onControllerLost(info)
+    });
+    this.ui.attachNetwork(this.network);
+
+    const initAudio = () => { this.sound.init(); };
+    window.addEventListener('click', initAudio);
+    window.addEventListener('keydown', initAudio);
+
+    this.bindKeyboard();
+    this.bindWindow();
+    this.resetCarToStart();
+    this.setPhase(PHASE.LOBBY);
+    this.ui.showPhase(PHASE.LOBBY);
+    this.ui.hideLoading();
+    this.network.init();
+    this.updateVisuals(0.016);
+    this.renderer.render(this.scene, this.camera);
+    this.lastFrame = performance.now();
+    this.started = true;
+    window.__FGDN__ = {
+      game: this,
+      network: this.network,
+      track: this.track,
+      startSolo: () => this.startSolo(),
+      startCoop: () => this.startCoop(),
+      retry: () => this.retry()
+    };
+    requestAnimationFrame((now) => this.frame(now));
+  }
+
+  bindKeyboard() {
+    const handleKey = (event, down) => {
+      if (event.target && ['INPUT', 'TEXTAREA', 'BUTTON'].includes(event.target.tagName)) return;
+      const code = event.code;
+      if (!['KeyA', 'KeyD', 'KeyS', 'ArrowLeft', 'ArrowRight', 'ArrowDown'].includes(code)) return;
+      event.preventDefault();
+      if (down && event.repeat) return;
+      if (code === 'KeyA' || code === 'ArrowLeft') this.keys.left = down;
+      if (code === 'KeyD' || code === 'ArrowRight') this.keys.right = down;
+      if (code === 'KeyS' || code === 'ArrowDown') this.keys.brake = down;
+    };
+    window.addEventListener('keydown', (event) => handleKey(event, true), { passive: false });
+    window.addEventListener('keyup', (event) => handleKey(event, false), { passive: false });
+    window.addEventListener('blur', () => {
+      this.keys.left = this.keys.right = this.keys.brake = false;
+    });
+  }
+
+  bindWindow() {
+    window.addEventListener('resize', () => this.onResize());
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden) {
+        this.keys.left = this.keys.right = this.keys.brake = false;
+      }
+    });
+  }
+
+  onResize() {
+    const w = window.innerWidth;
+    const h = window.innerHeight;
+    this.camera.aspect = w / h;
+    this.camera.updateProjectionMatrix();
+    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+    this.renderer.setSize(w, h);
+  }
+
+  resetCarToStart() {
+    const s = this.track.samples[0];
+    this.position.set(s.x, 0, s.z);
+    this.heading = s.theta;
+    this.trackIndex = 0;
+    this.speed = 0;
+    this.speedKmh = 0;
+    this.maxSpeed = 0;
+    this.progress = 0;
+    this.elapsed = 0;
+    this.countdown = CONFIG.COUNTDOWN_SECONDS;
+    this.countdownInt = 5;
+    this.steerVisual = 0;
+    this.steerTarget = 0;
+    this.brake = false;
+    this.falling = false;
+    this.fallVel = 0;
+    this.fallY = 0;
+    this.fallDrift = 0;
+    this.fallPitch = 0;
+    this.fallRoll = 0;
+    this.fallYaw = 0;
+    this.fallPitchVel = 0;
+    this.fallRollVel = 0;
+    this.fallYawVel = 0;
+    this.centerLateral = 0;
+    this.cornersOnRoad = 4;
+    this.edgeWarning = false;
+    this.footprint = [];
+    this.failureTimer = 0;
+    this.failureCause = null;
+    this.fireActive = false;
+    this.exploded = false;
+    this.explodingTimer = 0;
+    this.revealTimer = 0;
+    this.cameraShake = 0;
+    this.endPayload = null;
+    this.remoteInput = { steer: 0, brake: false, at: 0, slot: null };
+    this.keys.left = this.keys.right = this.keys.brake = false;
+    this.fireFX.stop();
+    this.explosionFX.active = false;
+    this.explosionFX.group.visible = false;
+    this.countdownDisplay.hide();
+    this.carRoot.position.set(s.x, 0, s.z);
+    this.carRoot.rotation.set(0, -s.theta, 0);
+  }
+
+  setPhase(phase) {
+    this.phase = phase;
+    if (this.network) this.network.setPhase(phase);
+    if (this.ui) this.ui.showPhase(phase);
+  }
+
+  startSolo() {
+    if (this.phase !== PHASE.LOBBY) return;
+    if (this.network && this.network.getPlayerCount() > 0) {
+      this.ui.toast('Putuskan koneksi HP dulu untuk bermain solo.');
+      return;
+    }
+    this.mode = 'solo';
+    this.roles = null;
+    this.cockpit.setTabletVisible(false);
+    this.beginRun();
+  }
+
+  startCoop() {
+    if (this.phase !== PHASE.LOBBY) return;
+    if (!this.network || !this.network.canStart()) {
+      this.ui.toast(this.network ? this.network.startBlockerMessage() : 'Room belum siap.');
+      return;
+    }
+    this.mode = 'coop';
+    this.roles = this.network.getRoles();
+    this.cockpit.setTabletVisible(true);
+    this.beginRun();
+  }
+
+  beginRun() {
+    // Generate a fresh new procedural route every time a game starts!
+    const seed = randomSeed32();
+    this.track = TrackGenerator.generate(seed, this.targetLength || 1000);
+    if (this.world) this.scene.remove(this.world.group);
+    this.world = new TrackWorld(this.track, this.scene, this.renderer);
+    this.ui.setSeed(this.track.seed);
+    this.navRoute = null;
+
+    this.resetCarToStart();
+    this.setPhase(PHASE.COUNTDOWN);
+    this.countdown = CONFIG.COUNTDOWN_SECONDS;
+    this.countdownInt = 5;
+    this.countdownDisplay.showNumber(this.countdownInt);
+    this.ui.hideEndScreens();
+    this.ui.setInGame(this.mode, this.roles);
+    this.ui.showPhase(PHASE.COUNTDOWN);
+    this.ui.updateHUD({
+      speedKmh: 0,
+      progress: 0,
+      elapsed: 0,
+      failureTimer: 0,
+      phase: PHASE.COUNTDOWN
+    });
+    this.cockpit.setModeLabel(this.mode);
+    this.sound.init();
+    this.sound.startBgm();
+    this.lastTelemetry = 0;
+    this.lastHud = 0;
+    if (this.network) {
+      if (this.mode === 'coop') {
+        this.network.broadcastState(PHASE.COUNTDOWN, {
+          countdown: CONFIG.COUNTDOWN_SECONDS,
+          mode: this.mode,
+          roles: this.network.getRoles()
+        });
+        window.setTimeout(() => {
+          this.network.sendTrack(this.track);
+        }, 40);
+      }
+    }
+  }
+
+  retry() {
+    if (this.phase !== PHASE.GAMEOVER && this.phase !== PHASE.WIN) return;
+    if (this.mode === 'coop' && this.network) {
+      this.roles = this.network.getRoles();
+      this.cockpit.setTabletVisible(true);
+    }
+    this.beginRun();
+  }
+
+  onPlayersChanged(info) {
+    if (!info) return;
+    if (this.phase === PHASE.PLAYING && info.role === 'driver' && !info.connected) {
+      this.remoteInput = { steer: 0, brake: false, at: 0, slot: null };
+      this.ui.toast('Driver terputus. Mobil akan meluncur tanpa kendali.');
+    }
+    if (this.phase === PHASE.LOBBY) this.ui.syncLobby();
+  }
+
+  onControllerLost(info) {
+    if (!info) return;
+    const label = info.role === 'driver' ? 'Driver' : 'Navigator';
+    this.ui.toast(`Koneksi ${label} (${info.slot.toUpperCase()}) terputus.`);
+    if (info.role === 'driver') {
+      this.remoteInput = { steer: 0, brake: false, at: 0, slot: null };
+    }
+  }
+
+  getControls() {
+    if (this.mode === 'solo') {
+      return {
+        steer: (this.keys.right ? 1 : 0) - (this.keys.left ? 1 : 0),
+        brake: this.keys.brake
+      };
+    }
+    const driverSlot = this.network ? this.network.getDriverSlot() : null;
+    if (!driverSlot) return { steer: 0, brake: false };
+    const fresh = performance.now() - this.remoteInput.at < 550;
+    if (!fresh) return { steer: 0, brake: false };
+    return {
+      steer: clamp(this.remoteInput.steer || 0, -1, 1),
+      brake: Boolean(this.remoteInput.brake)
+    };
+  }
+
+  frame(now) {
+    if (!this.started) return;
+    const rawDt = (now - this.lastFrame) / 1000;
+    this.lastFrame = now;
+    // Keep the world's clock honest even when a low-end GPU drops frames.
+    // Physics is sub-stepped below; the cap prevents huge tab-resume jumps.
+    const dt = clamp(Number.isFinite(rawDt) ? rawDt : 0.016, 0, 0.25);
+    this.time += dt;
+    this.frameCounter++;
+    this.update(dt);
+    this.renderer.render(this.scene, this.camera);
+    requestAnimationFrame((next) => this.frame(next));
+  }
+
+  update(dt) {
+    if (this.phase === PHASE.COUNTDOWN) {
+      this.updateCountdown(dt);
+    } else if (this.phase === PHASE.PLAYING) {
+      let remaining = dt;
+      let guard = 0;
+      while (remaining > 0.0001 && this.phase === PHASE.PLAYING && guard++ < 24) {
+        const step = Math.min(remaining, 1 / 60);
+        this.updatePhysics(step);
+        remaining -= step;
+      }
+    } else if (this.phase === PHASE.EXPLODING) {
+      this.explodingTimer -= dt;
+      this.explosionFX.update(dt);
+      this.fireFX.update(dt);
+      this.cameraShake = Math.max(0, this.cameraShake - dt * 0.8);
+      if (this.explodingTimer <= 0) this.finishFailure();
+    } else if (this.phase === PHASE.GAMEOVER) {
+      this.fireFX.update(dt);
+      this.explosionFX.update(dt);
+      this.revealTimer += dt;
+    } else if (this.phase === PHASE.WIN) {
+      this.explosionFX.update(dt);
+    }
+
+    this.countdownDisplay.update(dt);
+    this.updateVisuals(dt);
+    this.updateUIAndNetwork(dt);
+    this.sound.updateEngine(this.speedKmh, this.phase === PHASE.COUNTDOWN || this.phase === PHASE.PLAYING);
+    this.sound.updateBrake(this.brake, this.speedKmh);
+  }
+
+  updateCountdown(dt) {
+    this.countdown -= dt;
+    const number = Math.max(1, Math.ceil(this.countdown));
+    if (number !== this.countdownInt) {
+      this.countdownInt = number;
+      this.countdownDisplay.showNumber(number);
+    }
+    if (this.countdown <= 0) {
+      this.countdown = 0;
+      this.countdownInt = 0;
+      this.phase = PHASE.PLAYING;
+      this.elapsed = 0;
+      this.countdownDisplay.showGo();
+      if (this.network) {
+        this.network.setPhase(PHASE.PLAYING);
+        this.network.broadcastState(PHASE.PLAYING, {
+          mode: this.mode,
+          roles: this.mode === 'coop' ? this.network.getRoles() : null,
+          countdown: 0
+        });
+      }
+      this.ui.showPhase(PHASE.PLAYING);
+    }
+    if (this.network && this.mode === 'coop') {
+      this.sendTelemetryIfDue(performance.now(), true);
+    }
+  }
+
+  updatePhysics(dt) {
+    const controls = this.getControls();
+    this.steerTarget = controls.steer;
+    this.brake = controls.brake;
+    const speedNorm = clamp(this.speed / kmhToMs(CONFIG.MAX_KMH), 0, 1);
+
+    if (!this.falling) {
+      if (this.brake) {
+        this.speed = Math.max(0, this.speed - 22.5 * dt);
+      } else {
+        // Keep enough top-end pull to actually reach the 200 km/h cap, while
+        // the low-end curve still feels like a smooth automatic launch.
+        const engine = 8.4 * (1 - Math.pow(speedNorm, 2.15)) + 0.95;
+        const aeroDrag = 0.000035 * this.speed * this.speed;
+        this.speed = Math.min(kmhToMs(CONFIG.MAX_KMH), Math.max(0, this.speed + (engine - aeroDrag) * dt));
+      }
+    } else {
+      this.speed = Math.max(0, this.speed - 1.6 * dt);
+    }
+
+    this.maxSpeed = Math.max(this.maxSpeed, this.speed);
+    this.speedKmh = this.speed * 3.6;
+    const angularInput = this.falling ? 0 : this.steerTarget;
+    this.steerVisual = damp(this.steerVisual, angularInput, 9.2, dt);
+    const speedFactor = clamp(this.speed / 6, 0, 1);
+    // Low speed is nimble; at 200 km/h the car needs a long, brave arc.
+    const maxYawRate = lerp(2.35, 0.6, Math.pow(speedNorm, 0.52));
+    this.heading += this.steerVisual * maxYawRate * speedFactor * dt;
+    this.position.x += Math.sin(this.heading) * this.speed * dt;
+    this.position.z -= Math.cos(this.heading) * this.speed * dt;
+    this.elapsed += dt;
+
+    if (this.falling) {
+      // A small lateral drift plus pitch/roll/yaw inertia. The camera is
+      // mounted inside the cabin, so the horizon genuinely tips and tumbles.
+      const rightX = Math.cos(this.heading);
+      const rightZ = Math.sin(this.heading);
+      this.position.x += rightX * this.fallDrift * dt;
+      this.position.z += rightZ * this.fallDrift * dt;
+      this.fallVel -= 32 * dt;
+      this.fallY += this.fallVel * dt;
+      // Nose continues pitching down into a steep dive as gravity pulls heavy front engine
+      this.fallPitchVel -= 1.8 * dt;
+      this.fallPitch += this.fallPitchVel * dt;
+      this.fallRoll += this.fallRollVel * dt;
+      this.fallYaw += this.fallYawVel * dt;
+      if (this.fallY < -42) {
+        this.fallY = -42;
+        this.fallVel = 0;
+        // Let the wreck settle once it reaches the misty bottom.
+        this.fallPitchVel *= 0.92;
+        this.fallRollVel *= 0.92;
+        this.fallYawVel *= 0.92;
+        this.fallDrift *= 0.90;
+      }
+      this.failureTimer += dt;
+      this.failureCause = 'offroad';
+      if (this.failureTimer >= 3.2 && !this.fireActive) {
+        this.fireActive = true;
+        this.fireFX.start();
+      }
+      if (this.failureTimer >= CONFIG.STUCK_SECONDS) {
+        this.triggerExplosion('offroad');
+        return;
+      }
+      return;
+    }
+
+    // Find nearest 1 m centerline sample around the previous one. A bounded
+    // window prevents snapping to a nearby, unrelated stretch of road.
+    const nearest = this.findNearestSample();
+    const sample = this.track.samples[nearest];
+    this.trackIndex = nearest;
+    const dx = this.position.x - sample.x;
+    const dz = this.position.z - sample.z;
+    this.centerLateral = dx * sample.rightX + dz * sample.rightZ;
+    this.lateral = this.centerLateral;
+    this.progress = sample.d;
+
+    // Full-car footprint: all four body corners are projected onto the road.
+    const footprint = this.measureCarFootprint(nearest);
+    this.footprint = footprint.points;
+    this.cornersOnRoad = footprint.onRoad;
+    this.edgeWarning = footprint.onRoad < 4 ||
+      Math.abs(this.centerLateral) > CONFIG.ROAD_HALF_WIDTH - CONFIG.CAR_HALF_WIDTH;
+
+    if (footprint.onRoad < 4) {
+      // Partial edge friction when dipping wheels off road edge
+      this.speed *= 0.996;
+    }
+
+    const centerOnTarmac = Math.abs(this.centerLateral) <= (CONFIG.ROAD_HALF_WIDTH + 0.35);
+    // The car begins to fall when its centre of mass has tipped past the road edge
+    // or when almost all corners (3 or 4 corners, i.e. onRoad <= 1) have lost support.
+    if (!centerOnTarmac || footprint.onRoad <= 1) {
+      this.beginFall(this.centerLateral);
+      return;
+    }
+
+    const stopped = this.speed < 0.9;
+    if (stopped) {
+      this.failureTimer += dt;
+      this.failureCause = 'stuck';
+    } else {
+      if (this.failureTimer > 0) {
+        this.failureTimer = 0;
+        if (this.fireActive) {
+          this.fireActive = false;
+          this.fireFX.stop();
+        }
+      }
+    }
+
+    if (this.failureTimer >= 3.2 && !this.fireActive) {
+      this.fireActive = true;
+      this.fireFX.start();
+    }
+    if (this.failureTimer >= CONFIG.STUCK_SECONDS) {
+      this.triggerExplosion('stuck');
+      return;
+    }
+
+    if (this.progress >= (this.track.length - 0.2) && !this.falling) {
+      this.progress = this.track.length;
+      this.finishRun();
+    }
+  }
+
+  findNearestSample() {
+    const total = this.track.samples.length;
+    const start = Math.max(0, this.trackIndex - 45);
+    const end = Math.min(total - 1, this.trackIndex + 70);
+    let best = this.trackIndex;
+    let bestDist = Infinity;
+    for (let i = start; i <= end; i++) {
+      const s = this.track.samples[i];
+      const dx = this.position.x - s.x;
+      const dz = this.position.z - s.z;
+      const dist = dx * dx + dz * dz;
+      if (dist < bestDist) {
+        bestDist = dist;
+        best = i;
+      }
+    }
+    return best;
+  }
+
+  findNearestSampleNear(x, z, seed, back = 20, ahead = 24) {
+    const total = this.track.samples.length;
+    const start = Math.max(0, seed - back);
+    const end = Math.min(total - 1, seed + ahead);
+    let best = seed;
+    let bestDist = Infinity;
+    for (let i = start; i <= end; i++) {
+      const s = this.track.samples[i];
+      const dx = x - s.x;
+      const dz = z - s.z;
+      const dist = dx * dx + dz * dz;
+      if (dist < bestDist) {
+        bestDist = dist;
+        best = i;
+      }
+    }
+    return best;
+  }
+
+  measureCarFootprint(centerIndex) {
+    const hw = CONFIG.CAR_HALF_WIDTH;
+    const hl = CONFIG.CAR_HALF_LENGTH;
+    const sin = Math.sin(this.heading);
+    const cos = Math.cos(this.heading);
+    const rightX = cos;
+    const rightZ = sin;
+    const forwardX = sin;
+    const forwardZ = -cos;
+    const localPoints = [
+      { name: 'frontLeft', right: -hw, forward: hl },
+      { name: 'frontRight', right: hw, forward: hl },
+      { name: 'rearLeft', right: -hw, forward: -hl },
+      { name: 'rearRight', right: hw, forward: -hl }
+    ];
+    let onRoad = 0;
+    const points = localPoints.map((p) => {
+      const x = this.position.x + rightX * p.right + forwardX * p.forward;
+      const z = this.position.z + rightZ * p.right + forwardZ * p.forward;
+      const si = this.findNearestSampleNear(x, z, centerIndex, 20, 24);
+      const s = this.track.samples[si];
+      const lateral = (x - s.x) * s.rightX + (z - s.z) * s.rightZ;
+      const inside = Math.abs(lateral) <= CONFIG.ROAD_HALF_WIDTH - 0.035;
+      if (inside) onRoad++;
+      return { name: p.name, x, z, lateral, onRoad: inside };
+    });
+    return { points, onRoad };
+  }
+
+  beginFall(lateral) {
+    if (this.falling) return;
+    this.falling = true;
+    this.failureTimer = 0;
+    this.failureCause = 'offroad';
+    this.fallVel = -2.8;
+    const speedRatio = clamp(this.speed / kmhToMs(CONFIG.MAX_KMH), 0, 1);
+    const side = Math.sign(lateral) || (Math.random() > 0.5 ? 1 : -1);
+    this.fallDrift = side * (0.85 + speedRatio * 1.85);
+    this.fallPitch = 0;
+    this.fallRoll = 0;
+    this.fallYaw = 0;
+    // Heavy front engine causes immediate nose-down dive pitch (-2.8 to -4.5 rad/s)
+    this.fallPitchVel = -(2.8 + speedRatio * 1.8) * (0.9 + Math.random() * 0.35);
+    // Side leaving cliff edge causes strong lateral roll tumble (+3.2 to +4.8 rad/s)
+    this.fallRollVel = -side * (3.2 + speedRatio * 1.6) * (0.85 + Math.random() * 0.35);
+    this.fallYawVel = (Math.random() - 0.5) * 2.2 + this.steerVisual * 1.2;
+    this.steerTarget = 0;
+    this.ui.toast('Keluar jalur! Mobil jatuh ke jurang.');
+    this.cameraShake = Math.max(this.cameraShake, 1.5);
+  }
+
+  triggerExplosion(cause) {
+    if (this.phase !== PHASE.PLAYING) return;
+    this.failureCause = cause;
+    this.fireActive = false;
+    this.fireFX.stop();
+    this.sound.playExplosion();
+    this.sound.stopBgm();
+    this.explosionFX.start(this.carRoot.position.clone());
+    this.ui.flashExplosion();
+    this.cameraShake = 1.6;
+    this.speed = 0;
+    this.setPhase(PHASE.EXPLODING);
+    this.explodingTimer = 1.05;
+    this.endPayload = {
+      reason: cause === 'offroad'
+        ? 'Mobil terjatuh ke dalam jurang.'
+        : 'Mobil tidak bisa bergerak selama 5 detik berturut-turut.',
+      progress: Math.min(CONFIG.TRACK_LENGTH, this.progress),
+      elapsed: this.elapsed,
+      cause
+    };
+    this.ui.toast('BOOM! Mobil meledak.');
+    if (this.network) {
+      this.network.broadcastState(PHASE.EXPLODING, {
+        mode: this.mode,
+        cause,
+        elapsed: this.elapsed,
+        progress: this.progress
+      });
+    }
+  }
+
+  finishFailure() {
+    if (this.phase !== PHASE.EXPLODING) return;
+    this.setPhase(PHASE.GAMEOVER);
+    this.ui.showGameOver(this.endPayload || {
+      reason: 'Mobil meledak.',
+      progress: this.progress,
+      elapsed: this.elapsed
+    });
+    if (this.network) {
+      this.network.broadcastState(PHASE.GAMEOVER, {
+        mode: this.mode,
+        result: {
+          outcome: 'lose',
+          reason: this.endPayload && this.endPayload.reason,
+          cause: this.endPayload && this.endPayload.cause,
+          elapsed: this.elapsed,
+          progress: this.progress
+        }
+      });
+    }
+  }
+
+  finishRun() {
+    if (this.phase !== PHASE.PLAYING) return;
+    this.setPhase(PHASE.WIN);
+    this.speed = 0;
+    this.progress = this.track.length;
+    this.maxSpeed = Math.max(this.maxSpeed, this.speed);
+    this.sound.stopBgm();
+    this.ui.showWin({
+      elapsed: this.elapsed,
+      progress: this.track.length,
+      topSpeedKmh: this.maxSpeed * 3.6
+    });
+    if (this.network) {
+      this.network.broadcastState(PHASE.WIN, {
+        mode: this.mode,
+        result: {
+          outcome: 'win',
+          elapsed: this.elapsed,
+          progress: this.track.length,
+          topSpeedKmh: this.maxSpeed * 3.6
+        }
+      });
+    }
+  }
+
+  getNextTurn() {
+    for (const turn of this.track.turns) {
+      if (turn.d1 + 2 >= this.progress) {
+        return {
+          dir: turn.dir > 0 ? 'right' : 'left',
+          angle: turn.angle,
+          distance: Math.max(0, Math.round(turn.d0 - this.progress)),
+          active: this.progress >= turn.d0
+        };
+      }
+    }
+    return null;
+  }
+
+  buildNavRoute() {
+    return {
+      points: this.track.samples.filter((_, i) => i % 2 === 0),
+      length: this.track.length,
+      bounds: this.track.bounds,
+      turns: this.track.turns
+    };
+  }
+
+  updateVisuals(dt) {
+    const speedNorm = clamp(this.speed / kmhToMs(CONFIG.MAX_KMH), 0, 1);
+    const steer = this.steerVisual;
+    const active = this.phase === PHASE.COUNTDOWN || this.phase === PHASE.PLAYING || this.phase === PHASE.EXPLODING;
+    const bobAmount = active && !this.falling ? Math.pow(speedNorm, 1.8) * 0.009 : 0;
+    const bob = Math.sin(this.time * (11 + speedNorm * 18)) * bobAmount;
+    this.carRoot.position.x = this.position.x;
+    this.carRoot.position.z = this.position.z;
+    this.carRoot.position.y = this.fallY + bob;
+    if (this.falling) {
+      // Full cockpit inertia: nose-first pitch plus lateral roll and yaw spin.
+      this.carRoot.rotation.y = -this.heading + this.fallYaw;
+      this.carRoot.rotation.x = this.fallPitch;
+      this.carRoot.rotation.z = this.fallRoll;
+    } else {
+      this.carRoot.rotation.y = -this.heading;
+      const bodyRoll = active ? -steer * speedNorm * 0.032 : 0;
+      this.carRoot.rotation.z = bodyRoll;
+      this.carRoot.rotation.x = this.phase === PHASE.PLAYING && this.brake
+        ? clamp(-this.speed * 0.00022, -0.012, 0)
+        : 0;
+    }
+
+    const baseX = this.cockpit.cameraBase.x;
+    const baseY = this.cockpit.cameraBase.y;
+    const baseZ = this.cockpit.cameraBase.z;
+    let shakeX = 0;
+    let shakeY = 0;
+    let shakeRoll = 0;
+    const highSpeed = Math.pow(speedNorm, 3.2);
+    const vibration = active ? highSpeed * 0.0048 + (this.phase === PHASE.EXPLODING ? 0.02 : 0) : 0;
+    if (vibration > 0) {
+      shakeX = (Math.sin(this.time * 97.3) + Math.sin(this.time * 157.1) * 0.53) * vibration;
+      shakeY = (Math.sin(this.time * 128.9 + 1.3) + Math.sin(this.time * 71.7) * 0.6) * vibration * 0.8;
+      shakeRoll = Math.sin(this.time * 111.4) * vibration * 0.8;
+    }
+    if (this.falling) {
+      shakeX += Math.sin(this.time * 35) * 0.008;
+      shakeY += Math.cos(this.time * 23) * 0.005;
+    }
+    if (this.cameraShake > 0) {
+      shakeX += (Math.random() - 0.5) * this.cameraShake * 0.12;
+      shakeY += (Math.random() - 0.5) * this.cameraShake * 0.08;
+      shakeRoll += (Math.random() - 0.5) * this.cameraShake * 0.035;
+    }
+    this.cameraRig.position.set(baseX + shakeX, baseY + shakeY + bob * 0.6, baseZ);
+    const idleSway = this.phase === PHASE.LOBBY ? Math.sin(this.time * 1.2) * 0.0035 : 0;
+    const pitch = (this.brake ? -0.012 : 0.0025) + idleSway;
+    const yaw = -steer * speedNorm * 0.031;
+    const roll = -steer * speedNorm * 0.026 + shakeRoll + idleSway * 0.8;
+    this.cameraRig.rotation.set(pitch, yaw, roll);
+
+    const targetFov = 74 + speedNorm * 4.5;
+    if (Math.abs(this.camera.fov - targetFov) > 0.02) {
+      this.camera.fov = damp(this.camera.fov, targetFov, 4, dt);
+      this.camera.updateProjectionMatrix();
+    }
+
+    const mode = this.mode;
+    const navState = {
+      progress: this.progress,
+      x: this.position.x,
+      z: this.position.z,
+      heading: this.heading,
+      time: this.time
+    };
+    const route = this.mode === 'coop' ? this.navRoute || (this.navRoute = this.buildNavRoute()) : null;
+    this.cockpit.update(
+      this.time,
+      dt,
+      this.speedKmh,
+      steer,
+      mode,
+      route,
+      navState
+    );
+
+    this.fireFX.update(dt);
+    this.explosionFX.update(dt);
+    if (this.cameraShake > 0) this.cameraShake = Math.max(0, this.cameraShake - dt * 0.9);
+  }
+
+  updateUIAndNetwork(dt) {
+    const now = performance.now();
+    if (this.phase === PHASE.PLAYING || this.phase === PHASE.COUNTDOWN) {
+      if (now - this.lastHud > 90) {
+        this.lastHud = now;
+        this.ui.updateHUD({
+          speedKmh: this.speedKmh,
+          progress: this.progress,
+          elapsed: this.elapsed,
+          failureTimer: this.failureTimer,
+          edgeWarning: this.edgeWarning,
+          phase: this.phase
+        });
+      }
+      if (this.network && this.mode === 'coop') this.sendTelemetryIfDue(now);
+    } else if (this.phase === PHASE.EXPLODING) {
+      if (this.network && this.mode === 'coop') this.sendTelemetryIfDue(now);
+      if (now - this.lastHud > 90) {
+        this.lastHud = now;
+        this.ui.updateHUD({
+          speedKmh: this.speedKmh,
+          progress: this.progress,
+          elapsed: this.elapsed,
+          failureTimer: CONFIG.STUCK_SECONDS,
+          phase: this.phase
+        });
+      }
+    }
+  }
+
+  sendTelemetryIfDue(now, force = false) {
+    if (!this.network || this.mode !== 'coop') return;
+    if (!force && now - this.lastTelemetry < 105) return;
+    this.lastTelemetry = now;
+    this.network.broadcastTelemetry({
+      phase: this.phase,
+      mode: this.mode,
+      countdown: this.phase === PHASE.COUNTDOWN ? Math.max(0, this.countdown) : 0,
+      speedKmh: Math.round(this.speedKmh),
+      progress: Number(this.progress.toFixed(1)),
+      x: Number(this.position.x.toFixed(2)),
+      z: Number(this.position.z.toFixed(2)),
+      heading: Number(this.heading.toFixed(3)),
+      elapsed: Number(this.elapsed.toFixed(2)),
+      failureTimer: Number(this.failureTimer.toFixed(2)),
+      nextTurn: this.getNextTurn(),
+      roles: this.network.getRoles()
+    });
+  }
+}
+
+/* -------------------------------------------------------------------------
+   10. BOOT
+   ------------------------------------------------------------------------- */
+try {
+  const game = new Game();
+} catch (error) {
+  console.error('[FGDN] fatal boot error', error);
+  const loaderStatus = document.getElementById('loader-status');
+  if (loaderStatus) {
+    loaderStatus.textContent = `Gagal memulai game: ${error && error.message ? error.message : error}`;
+    loaderStatus.classList.add('load-error');
+    document.getElementById('loading').dataset.error = '1';
+  }
+}
+</script>
+</body>
+</html>
