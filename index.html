@@ -415,6 +415,20 @@
     cursor:pointer;transition:all .15s;-webkit-tap-highlight-color:transparent;
   }
   .dist-btn:hover,.dist-btn.active{color:var(--yellow);border-color:var(--yellow);background:rgba(255,209,102,.12);box-shadow:0 0 10px rgba(255,209,102,.15)}
+  .diff-group{display:flex;align-items:center;gap:6px;width:100%;margin-top:10px;flex-wrap:wrap}
+  .diff-btn{
+    padding:6px 12px;border:1px solid rgba(115,230,255,.2);border-radius:4px;
+    background:rgba(4,16,28,.7);color:#8eabba;font-size:10.5px;font-weight:800;
+    cursor:pointer;transition:all .15s;-webkit-tap-highlight-color:transparent;
+  }
+  .diff-btn:hover,.diff-btn.active{color:var(--yellow);border-color:var(--yellow);background:rgba(255,209,102,.12);box-shadow:0 0 10px rgba(255,209,102,.15)}
+  .quality-group{display:flex;align-items:center;gap:6px;width:100%;margin-top:10px;flex-wrap:wrap}
+  .quality-btn{
+    padding:6px 12px;border:1px solid rgba(115,230,255,.2);border-radius:4px;
+    background:rgba(4,16,28,.7);color:#8eabba;font-size:10.5px;font-weight:800;
+    cursor:pointer;transition:all .15s;-webkit-tap-highlight-color:transparent;
+  }
+  .quality-btn:hover,.quality-btn.active{color:var(--yellow);border-color:var(--yellow);background:rgba(255,209,102,.12);box-shadow:0 0 10px rgba(255,209,102,.15)}
   .audio-btn{
     border:1px solid rgba(115,230,255,.25);border-radius:4px;background:rgba(4,16,28,.75);
     color:var(--cyan);cursor:pointer;padding:5px 9px;font-size:13px;line-height:1;
@@ -535,6 +549,18 @@
           <button class="dist-btn active" data-dist="1000" type="button">1 KM</button>
           <button class="dist-btn" data-dist="3000" type="button">3 KM</button>
           <button class="dist-btn" data-dist="5000" type="button">5 KM</button>
+        </div>
+        <div class="diff-group" id="diff-group">
+          <span class="mini-label" style="margin:0;margin-right:4px">KESULITAN:</span>
+          <button class="diff-btn active" data-diff="normal" type="button">Normal</button>
+          <button class="diff-btn" data-diff="tanpaMarka" type="button">Tanpa Marka</button>
+          <button class="diff-btn" data-diff="berkabut" type="button">Berkabut</button>
+        </div>
+        <div class="quality-group" id="quality-group">
+          <span class="mini-label" style="margin:0;margin-right:4px">GRAFIK:</span>
+          <button class="quality-btn" data-quality="low" type="button">Ringan (60 FPS)</button>
+          <button class="quality-btn active" data-quality="normal" type="button">Normal</button>
+          <button class="quality-btn" data-quality="high" type="button">Tinggi</button>
         </div>
         <div class="solo-block">
           <button id="solo-btn" class="btn btn-primary solo-btn" type="button">
@@ -1068,7 +1094,7 @@ function traceRoundedRect(ctx, x, y, w, h, radius) {
   ctx.closePath();
 }
 
-function makeAsphaltTexture(renderer) {
+function makeAsphaltTexture(renderer, quality = 'normal') {
   const canvas = makeCanvas(256, 512);
   const ctx = canvas.getContext('2d');
   ctx.fillStyle = '#242a31';
@@ -1097,7 +1123,12 @@ function makeAsphaltTexture(renderer) {
   tex.wrapS = THREE.RepeatWrapping;
   tex.wrapT = THREE.RepeatWrapping;
   tex.colorSpace = THREE.SRGBColorSpace;
-  tex.anisotropy = Math.min(8, renderer.capabilities.getMaxAnisotropy());
+  const maxAniso = renderer.capabilities.getMaxAnisotropy();
+  let aniso = 8;
+  if (quality === 'low') aniso = 1;
+  else if (quality === 'normal') aniso = 4;
+  else aniso = Math.min(8, maxAniso);
+  tex.anisotropy = Math.min(aniso, maxAniso);
   return tex;
 }
 
@@ -1234,10 +1265,12 @@ function makeCheckerTexture() {
    4. TRACK WORLD — road, cliffs, chasms, signs, sky
    ------------------------------------------------------------------------- */
 class TrackWorld {
-  constructor(track, scene, renderer) {
+  constructor(track, scene, renderer, options = {}, quality = 'normal') {
     this.track = track;
     this.scene = scene;
     this.renderer = renderer;
+    this.options = options;
+    this.quality = quality;
     this.group = new THREE.Group();
     this.group.name = 'track-world';
     scene.add(this.group);
@@ -1255,7 +1288,11 @@ class TrackWorld {
 
   setupSkyAndLights() {
     this.scene.background = new THREE.Color(0x081624);
-    this.scene.fog = new THREE.FogExp2(0x0b1b2a, 0.0067);
+    if (this.options.berkabut) {
+      this.scene.fog = new THREE.FogExp2(0x0b1b2a, 0.19);
+    } else {
+      this.scene.fog = new THREE.FogExp2(0x0b1b2a, 0.0067);
+    }
 
     const skyGeo = new THREE.SphereGeometry(850, 36, 20);
     const skyMat = new THREE.ShaderMaterial({
@@ -1403,7 +1440,7 @@ class TrackWorld {
     geo.setIndex(indices);
     geo.computeVertexNormals();
     const mat = new THREE.MeshStandardMaterial({
-      map: makeAsphaltTexture(this.renderer),
+      map: makeAsphaltTexture(this.renderer, this.quality),
       color: 0xffffff,
       roughness: 0.88,
       metalness: 0.03
@@ -1578,6 +1615,7 @@ class TrackWorld {
   }
 
   buildRoadsideFurniture() {
+    if (this.options.tanpaMarka) return;
     const half = CONFIG.ROAD_HALF_WIDTH;
     const samples = this.track.samples;
     const spacing = 16;
@@ -2244,6 +2282,13 @@ class Cockpit {
     this.carRoot.add(light);
     this.carRoot.add(light.target);
     this.headlight = light;
+
+    // Dedicated close-range road illumination for 10 meters ahead
+    const nearLight = new THREE.SpotLight(0xfff3e0, 220, 16, 0.9, 0.5, 1.0);
+    nearLight.position.set(0, 0.78, -1.1);
+    nearLight.target.position.set(0, 0.0, -10);
+    this.carRoot.add(nearLight);
+    this.carRoot.add(nearLight.target);
   }
 
   setTabletVisible(visible) {
@@ -2735,7 +2780,8 @@ class CountdownDisplay {
       transparent: true,
       depthWrite: false,
       depthTest: false,
-      toneMapped: false
+      toneMapped: false,
+      fog: false
     });
     this.sprite = new THREE.Sprite(this.material);
     this.sprite.position.set(0, 2.55, -8.3);
@@ -3013,6 +3059,22 @@ class HostNetwork {
         const len = Number(msg.length);
         if ([1000, 3000, 5000].includes(len)) {
           this.handlers.onTrackLengthChanged && this.handlers.onTrackLengthChanged(len);
+          this.broadcastLobby();
+        }
+        break;
+      }
+      case 'setDifficulty': {
+        if (record.slot !== 'p1') return;
+        if (msg.options && typeof msg.options === 'object') {
+          this.handlers.onDifficultyChanged && this.handlers.onDifficultyChanged(msg.options);
+          this.broadcastLobby();
+        }
+        break;
+      }
+      case 'setQuality': {
+        if (record.slot !== 'p1') return;
+        if (['low', 'normal', 'high'].includes(msg.quality)) {
+          this.handlers.onQualityChanged && this.handlers.onQualityChanged(msg.quality);
           this.broadcastLobby();
         }
         break;
@@ -3371,6 +3433,8 @@ class GameUI {
       pillDistance: document.getElementById('pill-distance'),
       audioBtn: document.getElementById('audio-btn'),
       distGroup: document.getElementById('dist-group'),
+      diffGroup: document.getElementById('diff-group'),
+      qualityGroup: document.getElementById('quality-group'),
       warnHud: document.getElementById('warn-hud'),
       warnCount: document.getElementById('warn-count'),
       edgeWarn: document.getElementById('edge-warn'),
@@ -3442,6 +3506,110 @@ class GameUI {
         });
       });
     }
+
+    if (this.el.diffGroup) {
+      const diffBtns = this.el.diffGroup.querySelectorAll('.diff-btn');
+      diffBtns.forEach((btn) => {
+        btn.addEventListener('click', () => {
+          const diff = btn.dataset.diff;
+          const normalBtn = this.el.diffGroup.querySelector('[data-diff="normal"]');
+          const tanpaMarkaBtn = this.el.diffGroup.querySelector('[data-diff="tanpaMarka"]');
+          const berkabutBtn = this.el.diffGroup.querySelector('[data-diff="berkabut"]');
+
+          if (diff === 'normal') {
+            if (normalBtn) normalBtn.classList.add('active');
+            if (tanpaMarkaBtn) tanpaMarkaBtn.classList.remove('active');
+            if (berkabutBtn) berkabutBtn.classList.remove('active');
+          } else {
+            if (normalBtn) normalBtn.classList.remove('active');
+            btn.classList.toggle('active');
+
+            const tActive = tanpaMarkaBtn ? tanpaMarkaBtn.classList.contains('active') : false;
+            const bActive = berkabutBtn ? berkabutBtn.classList.contains('active') : false;
+            if (!tActive && !bActive) {
+              if (normalBtn) normalBtn.classList.add('active');
+            }
+          }
+
+          if (this.game && this.game.phase === PHASE.LOBBY) {
+            const seed = this.game.track ? this.game.track.seed : randomSeed32();
+            this.game.track = TrackGenerator.generate(seed, this.game.targetLength || 1000);
+            if (this.game.world) {
+              this.game.scene.remove(this.game.world.group);
+            }
+            this.game.world = new TrackWorld(this.game.track, this.game.scene, this.game.renderer, this.getDifficultyOptions(), this.getQualitySetting());
+          }
+        });
+      });
+    }
+
+    if (this.el.qualityGroup) {
+      const qBtns = this.el.qualityGroup.querySelectorAll('.quality-btn');
+      qBtns.forEach((btn) => {
+        btn.addEventListener('click', () => {
+          const q = btn.dataset.quality;
+          qBtns.forEach(b => b.classList.toggle('active', b.dataset.quality === q));
+
+          if (this.game && this.game.renderer) {
+            const pr = q === 'low' ? 1.0 : (q === 'high' ? Math.min(window.devicePixelRatio || 1, 2) : Math.min(window.devicePixelRatio || 1, 1.5));
+            this.game.renderer.setPixelRatio(pr);
+
+            if (this.game.phase === PHASE.LOBBY) {
+              const seed = this.game.track ? this.game.track.seed : randomSeed32();
+              this.game.track = TrackGenerator.generate(seed, this.game.targetLength || 1000);
+              if (this.game.world) {
+                this.game.scene.remove(this.game.world.group);
+              }
+              this.game.world = new TrackWorld(this.game.track, this.game.scene, this.game.renderer, this.getDifficultyOptions(), q);
+            }
+          }
+        });
+      });
+    }
+  }
+
+  getDifficultyOptions() {
+    if (!this.el.diffGroup) return { tanpaMarka: false, berkabut: false };
+    const tanpaMarkaBtn = this.el.diffGroup.querySelector('[data-diff="tanpaMarka"]');
+    const berkabutBtn = this.el.diffGroup.querySelector('[data-diff="berkabut"]');
+    return {
+      tanpaMarka: tanpaMarkaBtn ? tanpaMarkaBtn.classList.contains('active') : false,
+      berkabut: berkabutBtn ? berkabutBtn.classList.contains('active') : false
+    };
+  }
+
+  getQualitySetting() {
+    if (!this.el.qualityGroup) return 'normal';
+    const activeBtn = this.el.qualityGroup.querySelector('.quality-btn.active');
+    return activeBtn ? activeBtn.dataset.quality : 'normal';
+  }
+
+  setDifficultyOptionsState(opts) {
+    if (!this.el.diffGroup) return;
+    const normalBtn = this.el.diffGroup.querySelector('[data-diff="normal"]');
+    const tanpaMarkaBtn = this.el.diffGroup.querySelector('[data-diff="tanpaMarka"]');
+    const berkabutBtn = this.el.diffGroup.querySelector('[data-diff="berkabut"]');
+    if (opts.tanpaMarka) {
+      if (tanpaMarkaBtn) tanpaMarkaBtn.classList.add('active');
+      if (normalBtn) normalBtn.classList.remove('active');
+    } else {
+      if (tanpaMarkaBtn) tanpaMarkaBtn.classList.remove('active');
+    }
+    if (opts.berkabut) {
+      if (berkabutBtn) berkabutBtn.classList.add('active');
+      if (normalBtn) normalBtn.classList.remove('active');
+    } else {
+      if (berkabutBtn) berkabutBtn.classList.remove('active');
+    }
+    if (!opts.tanpaMarka && !opts.berkabut) {
+      if (normalBtn) normalBtn.classList.add('active');
+    }
+  }
+
+  setQualitySettingState(q) {
+    if (!this.el.qualityGroup) return;
+    const qBtns = this.el.qualityGroup.querySelectorAll('.quality-btn');
+    qBtns.forEach(btn => btn.classList.toggle('active', btn.dataset.quality === q));
   }
 
   attachNetwork(network) {
@@ -3828,7 +3996,9 @@ class Game {
         antialias: true,
         powerPreference: 'high-performance'
       });
-      this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+      const quality = this.ui ? this.ui.getQualitySetting() : 'normal';
+      const pr = quality === 'low' ? 1.0 : (quality === 'high' ? Math.min(window.devicePixelRatio || 1, 2) : Math.min(window.devicePixelRatio || 1, 1.5));
+      this.renderer.setPixelRatio(pr);
       this.renderer.setSize(window.innerWidth, window.innerHeight);
       this.renderer.outputColorSpace = THREE.SRGBColorSpace;
       this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
@@ -3840,7 +4010,8 @@ class Game {
     }
 
     this.track = TrackGenerator.generate(randomSeed32(), this.targetLength);
-    this.world = new TrackWorld(this.track, this.scene, this.renderer);
+    const quality = this.ui ? this.ui.getQualitySetting() : 'normal';
+    this.world = new TrackWorld(this.track, this.scene, this.renderer, this.ui.getDifficultyOptions(), quality);
     this.ui.setSeed(this.track.seed);
 
     this.carRoot = new THREE.Group();
@@ -3865,6 +4036,28 @@ class Game {
       onTrackLengthChanged: (len) => {
         this.targetLength = len;
         this.ui.setTrackLength && this.ui.setTrackLength(len);
+      },
+      onDifficultyChanged: (opts) => {
+        this.ui.setDifficultyOptionsState(opts);
+        if (this.phase === PHASE.LOBBY) {
+          const seed = this.track ? this.track.seed : randomSeed32();
+          this.track = TrackGenerator.generate(seed, this.targetLength || 1000);
+          if (this.world) this.scene.remove(this.world.group);
+          this.world = new TrackWorld(this.track, this.scene, this.renderer, this.ui.getDifficultyOptions(), this.ui.getQualitySetting());
+        }
+      },
+      onQualityChanged: (q) => {
+        this.ui.setQualitySettingState(q);
+        if (this.renderer) {
+          const pr = q === 'low' ? 1.0 : (q === 'high' ? Math.min(window.devicePixelRatio || 1, 2) : Math.min(window.devicePixelRatio || 1, 1.5));
+          this.renderer.setPixelRatio(pr);
+        }
+        if (this.phase === PHASE.LOBBY) {
+          const seed = this.track ? this.track.seed : randomSeed32();
+          this.track = TrackGenerator.generate(seed, this.targetLength || 1000);
+          if (this.world) this.scene.remove(this.world.group);
+          this.world = new TrackWorld(this.track, this.scene, this.renderer, this.ui.getDifficultyOptions(), q);
+        }
       },
       getTargetLength: () => this.targetLength,
       onStartRequested: () => this.startCoop(),
@@ -4017,10 +4210,11 @@ class Game {
 
   beginRun() {
     // Generate a fresh new procedural route every time a game starts!
+    const quality = this.ui ? this.ui.getQualitySetting() : 'normal';
     const seed = randomSeed32();
     this.track = TrackGenerator.generate(seed, this.targetLength || 1000);
     if (this.world) this.scene.remove(this.world.group);
-    this.world = new TrackWorld(this.track, this.scene, this.renderer);
+    this.world = new TrackWorld(this.track, this.scene, this.renderer, this.ui.getDifficultyOptions(), quality);
     this.ui.setSeed(this.track.seed);
     this.navRoute = null;
 

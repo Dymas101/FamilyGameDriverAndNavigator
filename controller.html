@@ -555,6 +555,22 @@
           <button type="button" class="dist-btn" data-dist="5000">5 KM</button>
         </div>
       </div>
+      <div class="dist-card" id="diff-card" style="display:none">
+        <span class="field-label">Pilih Kesulitan:</span>
+        <div class="dist-btn-group" id="controller-diff-group">
+          <button type="button" class="dist-btn active" data-diff="normal">Normal</button>
+          <button type="button" class="dist-btn" data-diff="tanpaMarka">Tanpa Marka</button>
+          <button type="button" class="dist-btn" data-diff="berkabut">Berkabut</button>
+        </div>
+      </div>
+      <div class="dist-card" id="quality-card" style="display:none">
+        <span class="field-label">Kualitas Grafik:</span>
+        <div class="dist-btn-group" id="controller-quality-group">
+          <button type="button" class="dist-btn" data-quality="low">Ringan</button>
+          <button type="button" class="dist-btn active" data-quality="normal">Normal</button>
+          <button type="button" class="dist-btn" data-quality="high">Tinggi</button>
+        </div>
+      </div>
       <div class="partner-card" id="partner-card">
         <span class="partner-dot"></span>
         <div class="partner-copy">
@@ -1263,6 +1279,10 @@
 
     const distCard = $('#dist-card');
     if (distCard) distCard.style.display = isHost ? 'block' : 'none';
+    const diffCard = $('#diff-card');
+    if (diffCard) diffCard.style.display = isHost ? 'block' : 'none';
+    const qualityCard = $('#quality-card');
+    if (qualityCard) qualityCard.style.display = isHost ? 'block' : 'none';
   }
 
   function updateMaxDistanceLabels(length) {
@@ -1282,6 +1302,45 @@
       const len = Number(btn.dataset.dist) || 1000;
       updateMaxDistanceLabels(len);
       send({ type: 'setTrackLength', length: len });
+      haptic(15);
+    });
+  });
+
+  $$('#controller-diff-group .dist-btn').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      if (!state.me.isHost || state.phase !== 'lobby' || !state.connected) return;
+      const diff = btn.dataset.diff;
+      const normalBtn = $('#controller-diff-group [data-diff="normal"]');
+      const tanpaMarkaBtn = $('#controller-diff-group [data-diff="tanpaMarka"]');
+      const berkabutBtn = $('#controller-diff-group [data-diff="berkabut"]');
+
+      if (diff === 'normal') {
+        if (normalBtn) normalBtn.classList.add('active');
+        if (tanpaMarkaBtn) tanpaMarkaBtn.classList.remove('active');
+        if (berkabutBtn) berkabutBtn.classList.remove('active');
+      } else {
+        if (normalBtn) normalBtn.classList.remove('active');
+        btn.classList.toggle('active');
+        const tActive = tanpaMarkaBtn ? tanpaMarkaBtn.classList.contains('active') : false;
+        const bActive = berkabutBtn ? berkabutBtn.classList.contains('active') : false;
+        if (!tActive && !bActive) {
+          if (normalBtn) normalBtn.classList.add('active');
+        }
+      }
+
+      const tanpaMarka = tanpaMarkaBtn ? tanpaMarkaBtn.classList.contains('active') : false;
+      const berkabut = berkabutBtn ? berkabutBtn.classList.contains('active') : false;
+      send({ type: 'setDifficulty', options: { tanpaMarka, berkabut } });
+      haptic(15);
+    });
+  });
+
+  $$('#controller-quality-group .dist-btn').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      if (!state.me.isHost || state.phase !== 'lobby' || !state.connected) return;
+      const q = btn.dataset.quality;
+      $$('#controller-quality-group .dist-btn').forEach(b => b.classList.toggle('active', b.dataset.quality === q));
+      send({ type: 'setQuality', quality: q });
       haptic(15);
     });
   });
